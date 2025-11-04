@@ -4,6 +4,9 @@ import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/SelectProfilePage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientRegisterPage.dart';
+
+import 'feature/authentication/presentation/pages/ProviderLoginPage.dart';
+import 'feature/authentication/presentation/pages/ProviderRegisterPage.dart';
 // TODO: Importa las pantallas de Provider cuando las tengas
 // import 'package:osito_polar_app/features/authentication/presentation/pages/provider_login_page.dart';
 
@@ -50,7 +53,7 @@ class MyApp extends StatelessWidget {
           onProviderClicked: () {
             // TODO: Navegar a '/provider_login' cuando exista
             // Por ahora, navega a la de cliente como ejemplo
-            // Navigator.pushNamed(context, '/provider_login');
+            Navigator.pushNamed(context, '/provider_login');
           },
         ),
 
@@ -85,6 +88,37 @@ class MyApp extends StatelessWidget {
         ),
 
         // TODO: Añadir las rutas para Provider
+
+        // --- RUTAS DE AUTENTICACIÓN DE Provider ---
+        '/provider_login': (context) => ProviderLoginPage(
+          onLoginClicked: (username, password) {
+            // TODO: Aquí va tu lógica de Login (Provider/ViewModel)
+            // Si el login es exitoso, navegas al Home del cliente
+            // Navigator.pushReplacementNamed(context, '/client_home');
+          },
+          onRegisterClicked: () {
+            // Navega a la pantalla de registro
+            Navigator.pushNamed(context, '/client_register');
+          },
+          onForgotPasswordClicked: () {
+            // TODO: Navegar a la pantalla de 'forgot_password'
+          },
+        ),
+
+        '/provider_register': (context) => ProviderRegisterPage(
+          onSignUpClicked: (businessName,username, password) {
+            // TODO: Aquí va tu lógica de Registro (Provider/ViewModel)
+            // Después de registrarse, volvemos a la pantalla de Login
+            Navigator.pop(context);
+
+            // Opcional: puedes mostrar un SnackBar de "Registro exitoso"
+          },
+          onSignInClicked: () {
+            // Si ya tiene cuenta, vuelve a la pantalla anterior (Login)
+            Navigator.pop(context);
+          },
+        ),
+
         // '/provider_login': (context) => ...
         // '/provider_register': (context) => ...
       },
