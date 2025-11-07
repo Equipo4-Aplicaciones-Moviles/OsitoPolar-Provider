@@ -11,10 +11,6 @@ import 'package:osito_polar_app/feature/authentication/presentation/pages/Client
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegisterPage.dart';
 
-// (Comentado porque estos SÍ son snake_case en mi contexto)
-// import 'package:osito_polar_app/features/provider_dashboard/presentation/pages/provider_home_page.dart';
-// ... (etc) ...
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setupLocator(); // Llama a tu 'ServiceLocator.dart'
@@ -39,59 +35,50 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'OsitoPolar App',
+      debugShowCheckedModeBanner: false, // 🔥 Quita el banner de DEBUG
       theme: ThemeData(
-        // ... (tu tema) ...
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
       initialRoute: '/select_profile',
       routes: {
         '/select_profile': (context) => SelectProfilePage(
-          onClientClicked: () {
-            Navigator.pushNamed(context, '/client_login');
-          },
-          onProviderClicked: () {
-            Navigator.pushNamed(context, '/provider_login');
-          },
-        ),
+              onClientClicked: () {
+                Navigator.pushNamed(context, '/client_login');
+              },
+              onProviderClicked: () {
+                Navigator.pushNamed(context, '/provider_login');
+              },
+            ),
         '/client_login': (context) => ClientLoginPage(
-          onLoginClicked: (username, password) {},
-          onRegisterClicked: () {
-            Navigator.pushNamed(context, '/client_register');
-          },
-          onForgotPasswordClicked: () {},
-        ),
+              onLoginClicked: (username, password) {},
+              onRegisterClicked: () {
+                Navigator.pushNamed(context, '/client_register');
+              },
+              onForgotPasswordClicked: () {},
+            ),
         '/client_register': (context) => ClientRegisterPage(
-          onSignUpClicked: (username, password) {
-            Navigator.pop(context);
-          },
-          onSignInClicked: () {
-            Navigator.pop(context);
-          },
-        ),
+              onSignUpClicked: (username, password) {
+                Navigator.pop(context);
+              },
+              onSignInClicked: () {
+                Navigator.pop(context);
+              },
+            ),
         '/provider_login': (context) => ProviderLoginPage(
-          onRegisterClicked: () {
-            Navigator.pushNamed(context, '/provider_register');
-          },
-          onForgotPasswordClicked: () {},
-        ),
+              onRegisterClicked: () {
+                Navigator.pushNamed(context, '/provider_register');
+              },
+              onForgotPasswordClicked: () {},
+            ),
         '/provider_register': (context) => ProviderRegisterPage(
-          onSignUpClicked: (businessName, username, password) {
-            Navigator.pop(context);
-          },
-          onSignInClicked: () {
-            Navigator.pop(context);
-          },
-        ),
-
-        // --- (Dejamos esto comentado por ahora) ---
-        // '/provider_home': (context) => const ProviderHomePage(),
-        // '/provider_equipment_detail': (context) =>
-        //     const ProviderEquipmentDetailPage(),
-        // '/provider_clients_technicians': (context) =>
-        //     const ProviderClientsTechniciansPage(),
-        // '/provider_client_account': (context) =>
-        //     const ProviderClientAccountPage(),
+              onSignUpClicked: (businessName, username, password) {
+                Navigator.pop(context);
+              },
+              onSignInClicked: () {
+                Navigator.pop(context);
+              },
+            ),
       },
     );
   }
