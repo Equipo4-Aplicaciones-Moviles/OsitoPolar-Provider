@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+// 1. IMPORTAMOS EL PROVIDER Y EL PAQUETE 'provider'
+import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/ui/widgets/OsitoPolarFooter.dart';
 import '../../../../core/ui/widgets/OsitoPolarTopBar.dart';
 
 /// Pantalla de Login para Providers (Empresas).
 class ProviderLoginPage extends StatefulWidget {
-  // Callbacks para la navegación
-  final Function(String businessName, String password) onLoginClicked;
+  // 2. ¡YA NO NECESITAMOS 'onLoginClicked'!
+  //    La pantalla ahora maneja su propia lógica.
+  // final Function(String businessName, String password) onLoginClicked;
   final VoidCallback onRegisterClicked;
   final VoidCallback onForgotPasswordClicked;
 
   const ProviderLoginPage({
     super.key,
-    required this.onLoginClicked,
+    // required this.onLoginClicked, // <-- Borrado
     required this.onRegisterClicked,
     required this.onForgotPasswordClicked,
   });
@@ -22,7 +26,6 @@ class ProviderLoginPage extends StatefulWidget {
 }
 
 class _ProviderLoginPageState extends State<ProviderLoginPage> {
-  // Controladores para leer el texto de los campos
   final _businessNameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscureText = true;
@@ -36,6 +39,22 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 3. ESCUCHAMOS LOS CAMBIOS DE ESTADO
+    //    Usamos 'watch' para que la UI se reconstruya cuando cambie el estado.
+    final provider = context.watch<ProviderLoginProvider>();
+    final state = provider.state;
+
+    // 4. ESCUCHAMOS "EVENTOS" (como éxito en login para navegar)
+    //    Usamos un "listener" para manejar efectos secundarios (navegación).
+    //    Esto es más seguro que llamar a Navigator.push dentro de 'build'.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (state == LoginState.success) {
+        // Si el login fue exitoso, navegamos al home y reseteamos el estado.
+        Navigator.pushReplacementNamed(context, '/provider_home');
+        // TODO: Resetear el estado en el provider (provider.resetState())
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: OsitoPolarTopBar(
@@ -83,32 +102,45 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                         controller: _businessNameController,
                         labelText: 'Empresa',
                         keyboardType: TextInputType.text,
+                        // Deshabilitamos el campo si está cargando
+                        isEnabled: state != LoginState.loading,
                       ),
                       const SizedBox(height: 16.0),
 
                       // --- CAMPO "PASSWORD" ---
-                      _buildPasswordField(),
+                      _buildPasswordField(
+                        isEnabled: state != LoginState.loading,
+                      ),
                       const SizedBox(height: 16.0),
 
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: widget.onForgotPasswordClicked,
+                          // Deshabilitamos si está cargando
+                          onPressed: state == LoginState.loading
+                              ? null
+                              : widget.onForgotPasswordClicked,
                           child: const Text(
                             'Forgot Password?',
                             style: TextStyle(
                               color: AppColors.textLink,
                               fontFamily: 'Inter',
                             ),
+
                           ),
                         ),
                       ),
                       const SizedBox(height: 24.0),
 
-                      // --- BOTÓN "SIGN IN" ---
+                      // --- BOTÓN "SIGN IN" (MODIFICADO) ---
                       ElevatedButton(
-                        onPressed: () {
-                          widget.onLoginClicked(
+                        // 5. LLAMAMOS AL PROVIDER
+                        //    Usamos 'context.read' dentro de un callback.
+                        //    Deshabilitamos el botón si está cargando.
+                        onPressed: state == LoginState.loading
+                            ? null
+                            : () {
+                          context.read<ProviderLoginProvider>().signIn(
                             _businessNameController.text,
                             _passwordController.text,
                           );
@@ -121,7 +153,13 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                         ),
-                        child: const Text(
+                        // 6. MOSTRAMOS SPINNER SI ESTÁ CARGANDO
+                        child: state == LoginState.loading
+                            ? const CircularProgressIndicator(
+                          valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                            : const Text(
                           'Sign In',
                           style: TextStyle(
                             fontFamily: 'Inter',
@@ -130,7 +168,23 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32.0),
+                      const SizedBox(height: 16.0),
+
+                      // 7. MOSTRAMOS MENSAJE DE ERROR
+                      if (state == LoginState.error)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            provider.errorMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 16.0),
 
                       // --- ENLACE A REGISTRO ---
                       Row(
@@ -144,7 +198,10 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                             ),
                           ),
                           TextButton(
-                            onPressed: widget.onRegisterClicked,
+                            // Deshabilitamos si está cargando
+                            onPressed: state == LoginState.loading
+                                ? null
+                                : widget.onRegisterClicked,
                             child: const Text(
                               'Register',
                               style: TextStyle(
@@ -172,9 +229,11 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
     required TextEditingController controller,
     required String labelText,
     required TextInputType keyboardType,
+    bool isEnabled = true, // Añadido
   }) {
     return TextField(
       controller: controller,
+      enabled: isEnabled, // Aplicado
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
@@ -210,10 +269,11 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
   }
 
   /// Helper para el campo de Password
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField({bool isEnabled = true}) { // Añadido
     return TextField(
       controller: _passwordController,
       obscureText: _obscureText,
+      enabled: isEnabled, // Aplicado
       decoration: InputDecoration(
         labelText: 'Password',
         filled: true,

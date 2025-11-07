@@ -1,18 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-// Importa TODAS las pantallas que vamos a conectar
+import 'package:osito_polar_app/core/di/ServiceLocator.dart'; // <-- Tus 'PascalCase'
+import 'package:provider/provider.dart';
+
+// --- 1. USANDO TUS NOMBRES DE ARCHIVO 'PascalCase.dart' ---
+import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/SelectProfilePage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientRegisterPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderLoginPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegisterPage.dart';
 
-import 'feature/authentication/presentation/pages/ProviderLoginPage.dart';
-import 'feature/authentication/presentation/pages/ProviderRegisterPage.dart';
-// TODO: Importa las pantallas de Provider cuando las tengas
-// import 'package:osito_polar_app/features/authentication/presentation/pages/provider_login_page.dart';
+// (Comentado porque estos SÍ son snake_case en mi contexto)
+// import 'package:osito_polar_app/features/provider_dashboard/presentation/pages/provider_home_page.dart';
+// ... (etc) ...
 
-void main() {
-  // Aquí puedes configurar tu Service Locator (get_it) si lo usas
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  setupLocator(); // Llama a tu 'ServiceLocator.dart'
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          // 2. USANDO TU NOMBRE DE CLASE 'ProviderLoginProvider'
+          create: (_) => sl<ProviderLoginProvider>(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -23,104 +40,58 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'OsitoPolar App',
       theme: ThemeData(
-        colorScheme: ColorScheme.light(
-          primary: AppColors.primaryButton,
-          onPrimary: AppColors.buttonLabel,
-          secondary: AppColors.title,
-          background: AppColors.backgroundLight,
-          surface: AppColors.cardBackground,
-          onSurface: AppColors.textColor,
-          outline: AppColors.textFieldBorder,
-          surfaceVariant: AppColors.cardBorder,
-        ),
+        // ... (tu tema) ...
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-
-      // 1. Ya no usamos 'home', definimos la ruta inicial
       initialRoute: '/select_profile',
-
-      // 2. Definimos el "mapa" de navegación de la app
       routes: {
-        // --- RUTA INICIAL ---
         '/select_profile': (context) => SelectProfilePage(
-          // Aquí es donde solucionamos el error:
-          // Le decimos qué hacer a cada botón
           onClientClicked: () {
-            // Navega a la ruta '/client_login'
             Navigator.pushNamed(context, '/client_login');
           },
           onProviderClicked: () {
-            // TODO: Navegar a '/provider_login' cuando exista
-            // Por ahora, navega a la de cliente como ejemplo
             Navigator.pushNamed(context, '/provider_login');
           },
         ),
-
-        // --- RUTAS DE AUTENTICACIÓN DE CLIENTE ---
         '/client_login': (context) => ClientLoginPage(
-          onLoginClicked: (username, password) {
-            // TODO: Aquí va tu lógica de Login (Provider/ViewModel)
-            // Si el login es exitoso, navegas al Home del cliente
-            // Navigator.pushReplacementNamed(context, '/client_home');
-          },
+          onLoginClicked: (username, password) {},
           onRegisterClicked: () {
-            // Navega a la pantalla de registro
             Navigator.pushNamed(context, '/client_register');
           },
-          onForgotPasswordClicked: () {
-            // TODO: Navegar a la pantalla de 'forgot_password'
-          },
+          onForgotPasswordClicked: () {},
         ),
-
         '/client_register': (context) => ClientRegisterPage(
           onSignUpClicked: (username, password) {
-            // TODO: Aquí va tu lógica de Registro (Provider/ViewModel)
-            // Después de registrarse, volvemos a la pantalla de Login
             Navigator.pop(context);
-
-            // Opcional: puedes mostrar un SnackBar de "Registro exitoso"
           },
           onSignInClicked: () {
-            // Si ya tiene cuenta, vuelve a la pantalla anterior (Login)
             Navigator.pop(context);
           },
         ),
-
-        // TODO: Añadir las rutas para Provider
-
-        // --- RUTAS DE AUTENTICACIÓN DE Provider ---
         '/provider_login': (context) => ProviderLoginPage(
-          onLoginClicked: (username, password) {
-            // TODO: Aquí va tu lógica de Login (Provider/ViewModel)
-            // Si el login es exitoso, navegas al Home del cliente
-            // Navigator.pushReplacementNamed(context, '/client_home');
-          },
           onRegisterClicked: () {
-            // Navega a la pantalla de registro
-            Navigator.pushNamed(context, '/client_register');
+            Navigator.pushNamed(context, '/provider_register');
           },
-          onForgotPasswordClicked: () {
-            // TODO: Navegar a la pantalla de 'forgot_password'
-          },
+          onForgotPasswordClicked: () {},
         ),
-
         '/provider_register': (context) => ProviderRegisterPage(
-          onSignUpClicked: (businessName,username, password) {
-            // TODO: Aquí va tu lógica de Registro (Provider/ViewModel)
-            // Después de registrarse, volvemos a la pantalla de Login
+          onSignUpClicked: (businessName, username, password) {
             Navigator.pop(context);
-
-            // Opcional: puedes mostrar un SnackBar de "Registro exitoso"
           },
           onSignInClicked: () {
-            // Si ya tiene cuenta, vuelve a la pantalla anterior (Login)
             Navigator.pop(context);
           },
         ),
 
-        // '/provider_login': (context) => ...
-        // '/provider_register': (context) => ...
+        // --- (Dejamos esto comentado por ahora) ---
+        // '/provider_home': (context) => const ProviderHomePage(),
+        // '/provider_equipment_detail': (context) =>
+        //     const ProviderEquipmentDetailPage(),
+        // '/provider_clients_technicians': (context) =>
+        //     const ProviderClientsTechniciansPage(),
+        // '/provider_client_account': (context) =>
+        //     const ProviderClientAccountPage(),
       },
     );
   }
