@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-// 1. IMPORTAMOS EL PROVIDER Y EL PAQUETE 'provider'
-import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
-import 'package:provider/provider.dart';
+// 1. Ya no necesitamos importar el Provider, ¡lo hemos desconectado!
+// import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+// import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
+// (Asumiendo que tus widgets core SÍ usan 'PascalCase.dart' como tus otras carpetas)
 import '../../../../core/ui/widgets/OsitoPolarFooter.dart';
 import '../../../../core/ui/widgets/OsitoPolarTopBar.dart';
 
 /// Pantalla de Login para Providers (Empresas).
 class ProviderLoginPage extends StatefulWidget {
-  // 2. ¡YA NO NECESITAMOS 'onLoginClicked'!
-  //    La pantalla ahora maneja su propia lógica.
-  // final Function(String businessName, String password) onLoginClicked;
+  // 2. Quitamos el 'onLoginClicked' porque lo manejamos aquí
   final VoidCallback onRegisterClicked;
   final VoidCallback onForgotPasswordClicked;
 
   const ProviderLoginPage({
     super.key,
-    // required this.onLoginClicked, // <-- Borrado
     required this.onRegisterClicked,
     required this.onForgotPasswordClicked,
   });
@@ -39,28 +37,14 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 3. ESCUCHAMOS LOS CAMBIOS DE ESTADO
-    //    Usamos 'watch' para que la UI se reconstruya cuando cambie el estado.
-    final provider = context.watch<ProviderLoginProvider>();
-    final state = provider.state;
-
-    // 4. ESCUCHAMOS "EVENTOS" (como éxito en login para navegar)
-    //    Usamos un "listener" para manejar efectos secundarios (navegación).
-    //    Esto es más seguro que llamar a Navigator.push dentro de 'build'.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (state == LoginState.success) {
-        // Si el login fue exitoso, navegamos al home y reseteamos el estado.
-        Navigator.pushReplacementNamed(context, '/provider_home');
-        // TODO: Resetear el estado en el provider (provider.resetState())
-      }
-    });
+    // 3. ¡BORRAMOS TODA LA LÓGICA DEL PROVIDER!
+    //    Ya no usamos context.watch, state, ni el listener.
+    //    Esto evita cualquier error de 'GetIt' o de 'state'.
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: OsitoPolarTopBar(
-        onMenuClicked: () {
-          // TODO: Implementar lógica del drawer
-        },
+        onMenuClicked: () {},
       ),
       bottomNavigationBar: const OsitoPolarFooter(),
       body: SafeArea(
@@ -102,48 +86,38 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                         controller: _businessNameController,
                         labelText: 'Empresa',
                         keyboardType: TextInputType.text,
-                        // Deshabilitamos el campo si está cargando
-                        isEnabled: state != LoginState.loading,
+                        isEnabled: true, // Siempre habilitado
                       ),
                       const SizedBox(height: 16.0),
 
                       // --- CAMPO "PASSWORD" ---
                       _buildPasswordField(
-                        isEnabled: state != LoginState.loading,
+                        isEnabled: true, // Siempre habilitado
                       ),
                       const SizedBox(height: 16.0),
 
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          // Deshabilitamos si está cargando
-                          onPressed: state == LoginState.loading
-                              ? null
-                              : widget.onForgotPasswordClicked,
+                          onPressed: widget.onForgotPasswordClicked, // Siempre habilitado
                           child: const Text(
                             'Forgot Password?',
                             style: TextStyle(
                               color: AppColors.textLink,
                               fontFamily: 'Inter',
                             ),
-
                           ),
                         ),
                       ),
                       const SizedBox(height: 24.0),
 
-                      // --- BOTÓN "SIGN IN" (MODIFICADO) ---
+                      // --- 4. ¡AQUÍ ESTÁ EL BYPASS! ---
                       ElevatedButton(
-                        // 5. LLAMAMOS AL PROVIDER
-                        //    Usamos 'context.read' dentro de un callback.
-                        //    Deshabilitamos el botón si está cargando.
-                        onPressed: state == LoginState.loading
-                            ? null
-                            : () {
-                          context.read<ProviderLoginProvider>().signIn(
-                            _businessNameController.text,
-                            _passwordController.text,
-                          );
+                        onPressed: () {
+                          print('--- LOGIN SIMULADO (BYPASS) ---');
+                          // Navegamos directamente al home sin verificar.
+                          // Esto funciona porque ya descomentamos la ruta en main.dart
+                          Navigator.pushReplacementNamed(context, '/provider_home');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryButton,
@@ -153,13 +127,8 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                         ),
-                        // 6. MOSTRAMOS SPINNER SI ESTÁ CARGANDO
-                        child: state == LoginState.loading
-                            ? const CircularProgressIndicator(
-                          valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                            : const Text(
+                        // 5. Ya no mostramos el Spinner, solo el texto
+                        child: const Text(
                           'Sign In',
                           style: TextStyle(
                             fontFamily: 'Inter',
@@ -170,20 +139,7 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                       ),
                       const SizedBox(height: 16.0),
 
-                      // 7. MOSTRAMOS MENSAJE DE ERROR
-                      if (state == LoginState.error)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            provider.errorMessage,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ),
-
+                      // 6. Ya no mostramos el mensaje de error
                       const SizedBox(height: 16.0),
 
                       // --- ENLACE A REGISTRO ---
@@ -198,10 +154,7 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                             ),
                           ),
                           TextButton(
-                            // Deshabilitamos si está cargando
-                            onPressed: state == LoginState.loading
-                                ? null
-                                : widget.onRegisterClicked,
+                            onPressed: widget.onRegisterClicked, // Siempre habilitado
                             child: const Text(
                               'Register',
                               style: TextStyle(
@@ -224,16 +177,17 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
     );
   }
 
+  // ... (Los helpers _buildTextField y _buildPasswordField no cambian) ...
   /// Helper para campos de texto
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
     required TextInputType keyboardType,
-    bool isEnabled = true, // Añadido
+    bool isEnabled = true,
   }) {
     return TextField(
       controller: controller,
-      enabled: isEnabled, // Aplicado
+      enabled: isEnabled,
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
@@ -269,11 +223,11 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
   }
 
   /// Helper para el campo de Password
-  Widget _buildPasswordField({bool isEnabled = true}) { // Añadido
+  Widget _buildPasswordField({bool isEnabled = true}) {
     return TextField(
       controller: _passwordController,
       obscureText: _obscureText,
-      enabled: isEnabled, // Aplicado
+      enabled: isEnabled,
       decoration: InputDecoration(
         labelText: 'Password',
         filled: true,

@@ -14,6 +14,12 @@ import 'package:osito_polar_app/feature/authentication/presentation/pages/Provid
 // (Comentado porque estos SÍ son snake_case en mi contexto)
 // import 'package:osito_polar_app/features/provider_dashboard/presentation/pages/provider_home_page.dart';
 // ... (etc) ...
+// (Asumiendo que tus archivos se llaman así y están en esa ruta)
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderHomePage.dart';
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderEquipmentDetailPage.dart';
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientsTechniciansPage.dart';
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +29,6 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          // 2. USANDO TU NOMBRE DE CLASE 'ProviderLoginProvider'
           create: (_) => sl<ProviderLoginProvider>(),
         ),
       ],
@@ -35,18 +40,27 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'OsitoPolar App',
       theme: ThemeData(
-        // ... (tu tema) ...
+        colorScheme: ColorScheme.light(
+          primary: AppColors.primaryButton,
+          onPrimary: AppColors.buttonLabel,
+          secondary: AppColors.title,
+          background: AppColors.backgroundLight,
+          surface: AppColors.cardBackground,
+          onSurface: AppColors.textColor,
+          outline: AppColors.textFieldBorder,
+          surfaceVariant: AppColors.cardBorder,
+        ),
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
       initialRoute: '/select_profile',
       routes: {
+        // --- RUTAS DE AUTENTICACIÓN ---
         '/select_profile': (context) => SelectProfilePage(
           onClientClicked: () {
             Navigator.pushNamed(context, '/client_login');
@@ -85,14 +99,18 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        // --- (Dejamos esto comentado por ahora) ---
-        // '/provider_home': (context) => const ProviderHomePage(),
-        // '/provider_equipment_detail': (context) =>
-        //     const ProviderEquipmentDetailPage(),
-        // '/provider_clients_technicians': (context) =>
-        //     const ProviderClientsTechniciansPage(),
-        // '/provider_client_account': (context) =>
-        //     const ProviderClientAccountPage(),
+        // --- ¡RUTAS DEL DASHBOARD DESCOMENTADAS! ---
+        '/provider_home': (context) => const ProviderHomePage(),
+        '/provider_equipment_detail': (context) =>
+        const ProviderEquipmentDetailPage(),
+        '/provider_clients_technicians': (context) =>
+        const ProviderClientsTechniciansPage(),
+        '/provider_client_account': (context) =>
+        const ProviderClientAccountPage(),
+
+        // --- RUTAS DE CLIENTE (AÚN COMENTADAS) ---
+        // TODO: Añadir las rutas del dashboard del cliente aquí
+        // '/client_home': (context) => const ClientHomePage(),
       },
     );
   }
