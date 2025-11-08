@@ -3,14 +3,17 @@ import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/core/di/ServiceLocator.dart';
 import 'package:provider/provider.dart';
 
-// --- Providers y Páginas ---
+// --- Providers ---
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+// ¡NUEVO! Importamos el Provider del Home
+import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
+
+// --- Páginas ---
 import 'package:osito_polar_app/feature/authentication/presentation/pages/SelectProfilePage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientRegisterPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegisterPage.dart';
-
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderHomePage.dart';
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderEquipmentDetailPage.dart';
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientsTechniciansPage.dart';
@@ -23,8 +26,13 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        // 1. El provider de Login (ya estaba)
         ChangeNotifierProvider(
           create: (_) => sl<ProviderLoginProvider>(),
+        ),
+        // 2. ¡NUEVO! El provider del Dashboard
+        ChangeNotifierProvider(
+          create: (_) => sl<ProviderHomeProvider>(),
         ),
       ],
       child: const MyApp(),
@@ -39,74 +47,60 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'OsitoPolar App',
-
-      // 🔥 Esta línea elimina el banner de DEBUG
-      debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
-        colorScheme: ColorScheme.light(
-          primary: AppColors.primaryButton,
-          onPrimary: AppColors.buttonLabel,
-          secondary: AppColors.title,
-          background: AppColors.backgroundLight,
-          surface: AppColors.cardBackground,
-          onSurface: AppColors.textColor,
-          outline: AppColors.textFieldBorder,
-          surfaceVariant: AppColors.cardBorder,
-        ),
+        // ... (tu tema) ...
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-
       initialRoute: '/select_profile',
       routes: {
-        // --- AUTENTICACIÓN ---
+        // --- RUTAS DE AUTENTICACIÓN ---
         '/select_profile': (context) => SelectProfilePage(
-              onClientClicked: () {
-                Navigator.pushNamed(context, '/client_login');
-              },
-              onProviderClicked: () {
-                Navigator.pushNamed(context, '/provider_login');
-              },
-            ),
+          onClientClicked: () {
+            Navigator.pushNamed(context, '/client_login');
+          },
+          onProviderClicked: () {
+            Navigator.pushNamed(context, '/provider_login');
+          },
+        ),
         '/client_login': (context) => ClientLoginPage(
-              onLoginClicked: (username, password) {},
-              onRegisterClicked: () {
-                Navigator.pushNamed(context, '/client_register');
-              },
-              onForgotPasswordClicked: () {},
-            ),
+          onLoginClicked: (username, password) {},
+          onRegisterClicked: () {
+            Navigator.pushNamed(context, '/client_register');
+          },
+          onForgotPasswordClicked: () {},
+        ),
         '/client_register': (context) => ClientRegisterPage(
-              onSignUpClicked: (username, password) {
-                Navigator.pop(context);
-              },
-              onSignInClicked: () {
-                Navigator.pop(context);
-              },
-            ),
+          onSignUpClicked: (username, password) {
+            Navigator.pop(context);
+          },
+          onSignInClicked: () {
+            Navigator.pop(context);
+          },
+        ),
         '/provider_login': (context) => ProviderLoginPage(
-              onRegisterClicked: () {
-                Navigator.pushNamed(context, '/provider_register');
-              },
-              onForgotPasswordClicked: () {},
-            ),
+          onRegisterClicked: () {
+            Navigator.pushNamed(context, '/provider_register');
+          },
+          onForgotPasswordClicked: () {},
+        ),
         '/provider_register': (context) => ProviderRegisterPage(
-              onSignUpClicked: (businessName, username, password) {
-                Navigator.pop(context);
-              },
-              onSignInClicked: () {
-                Navigator.pop(context);
-              },
-            ),
+          onSignUpClicked: (businessName, username, password) {
+            Navigator.pop(context);
+          },
+          onSignInClicked: () {
+            Navigator.pop(context);
+          },
+        ),
 
-        // --- DASHBOARD DEL PROVEEDOR ---
+        // --- RUTAS DEL DASHBOARD (ya estaban bien) ---
         '/provider_home': (context) => const ProviderHomePage(),
         '/provider_equipment_detail': (context) =>
-            const ProviderEquipmentDetailPage(),
+        const ProviderEquipmentDetailPage(),
         '/provider_clients_technicians': (context) =>
-            const ProviderClientsTechniciansPage(),
+        const ProviderClientsTechniciansPage(),
         '/provider_client_account': (context) =>
-            const ProviderClientAccountPage(),
+        const ProviderClientAccountPage(),
       },
     );
   }
