@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 // ¡Actualizado para usar tus imports 'PascalCase'!
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/SignInUseCase.dart';
@@ -16,8 +17,10 @@ enum LoginState {
 /// ¡Esta es la clase que se llama 'ProviderLoginProvider'!
 class ProviderLoginProvider extends ChangeNotifier {
   final SignInUseCase signInUseCase;
-
-  ProviderLoginProvider({required this.signInUseCase});
+  final SharedPreferences prefs;
+  ProviderLoginProvider(
+      {required this.signInUseCase,
+        required this.prefs,});
 
   // --- Estados de la UI ---
   LoginState _state = LoginState.initial;
@@ -54,12 +57,20 @@ class ProviderLoginProvider extends ChangeNotifier {
         // --- Caso de Éxito ---
         _user = user;
         _state = LoginState.success;
+
         // TODO: Guardar el user.token en SharedPreferences (LocalStorage)
+        print('Login exitoso. Guardando token: ${user.token}');
+        _saveTokenToPrefs(user.token);
+
       },
     );
 
     // 4. Notifica a la UI sobre el nuevo estado (éxito o error)
     notifyListeners();
+  }
+
+  Future<void> _saveTokenToPrefs(String token) async {
+    await prefs.setString('auth_token', token);
   }
 
   /// Convierte un objeto Failure en un mensaje legible para el usuario.

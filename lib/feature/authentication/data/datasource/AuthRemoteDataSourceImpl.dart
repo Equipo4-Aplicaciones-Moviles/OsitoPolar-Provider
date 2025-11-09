@@ -4,6 +4,8 @@ import 'package:osito_polar_app/feature/authentication/data/models/SignInRequest
 import 'package:osito_polar_app/feature/authentication/data/models/AuthenticatedUserModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/datasource/AuthRemoteDataSource.dart';
 
+import 'package:osito_polar_app/feature/authentication/data/models/SignUpRequestModel.dart';
+import 'package:osito_polar_app/feature/authentication/data/datasource/AuthRemoteDataSource.dart';
 // --- ¡SOLUCIÓN AQUÍ! ---
 // Como estás compilando para Windows, 'localhost' SÍ funciona.
 // Añadimos 'http://'
@@ -52,4 +54,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw Exception('No se pudo conectar al servidor.');
     }
   }
+
+  @override
+  Future<void> signUp(SignUpRequestModel request) async {
+    final uri = Uri.parse('$kBaseUrl/api/v1/authentication/sign-up');
+
+    print('Llamando a la API: $uri');
+
+    try {
+      final response = await client.post(
+        uri,
+        headers: { 'Content-Type': 'application/json' },
+        body: request.toJson(),
+      );
+
+      print('Respuesta de la API: ${response.statusCode}');
+
+      // Tu API (Swagger) devuelve 200 para un registro exitoso
+      if (response.statusCode == 200) {
+        // No hay nada que devolver, fue exitoso
+        return;
+      } else {
+        // Error (ej. 400 Bad Request si el usuario ya existe)
+        print('Error de API: ${response.body}');
+        throw Exception('Error al registrar usuario: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error de red: $e');
+      throw Exception('No se pudo conectar al servidor.');
+    }
+  }
+
 }

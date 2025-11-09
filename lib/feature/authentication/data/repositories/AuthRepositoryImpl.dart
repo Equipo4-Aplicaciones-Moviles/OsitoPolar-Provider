@@ -5,6 +5,9 @@ import 'package:osito_polar_app/feature/authentication/data/models/SignInRequest
 import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthRepository.dart';
 
+import 'package:osito_polar_app/feature/authentication/data/models/SignUpRequestModel.dart';
+import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
+import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthRepository.dart';
 /// La "IMPLEMENTACIÓN" del contrato AuthRepository.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
@@ -33,6 +36,27 @@ class AuthRepositoryImpl implements AuthRepository {
 
     } on Exception catch (e) {
       // TODO: Manejar excepciones específicas (401, 404, etc.)
+      return Left(ServerFailure());
+    }
+  }
+
+  // --- ¡AÑADIDO! ---
+  @override
+  Future<Either<Failure, void>> signUp({
+    required String username,
+    required String password,
+  }) async {
+    try {
+      final requestModel =
+      SignUpRequestModel(username: username, password: password);
+
+      // Llama al DataSource. No esperamos respuesta (es void)
+      await remoteDataSource.signUp(requestModel);
+
+      // Si no hubo 'Exception', fue exitoso
+      return const Right(null); // 'null' representa 'void' en dartz
+
+    } on Exception {
       return Left(ServerFailure());
     }
   }

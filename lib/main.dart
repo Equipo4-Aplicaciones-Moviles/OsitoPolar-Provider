@@ -19,20 +19,24 @@ import 'package:osito_polar_app/feature/provider-module/presentation/pages/Provi
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientsTechniciansPage.dart';
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
 
+import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
+// ¡MODIFICADO! main() ahora es async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  setupLocator();
+  // ¡MODIFICADO! Esperamos a que 'setupLocator' termine
+  await setupLocator();
 
   runApp(
     MultiProvider(
       providers: [
-        // 1. El provider de Login (ya estaba)
         ChangeNotifierProvider(
           create: (_) => sl<ProviderLoginProvider>(),
         ),
-        // 2. ¡NUEVO! El provider del Dashboard
         ChangeNotifierProvider(
           create: (_) => sl<ProviderHomeProvider>(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => sl<RegisterProvider>(),
         ),
       ],
       child: const MyApp(),
@@ -84,10 +88,12 @@ class MyApp extends StatelessWidget {
           },
           onForgotPasswordClicked: () {},
         ),
+
+        // ¡MODIFICADO! Esta ruta ahora está conectada al Provider
         '/provider_register': (context) => ProviderRegisterPage(
-          onSignUpClicked: (businessName, username, password) {
-            Navigator.pop(context);
-          },
+          // onSignUpClicked: (businessName, username, password) {
+          //   Navigator.pop(context);
+          // },
           onSignInClicked: () {
             Navigator.pop(context);
           },

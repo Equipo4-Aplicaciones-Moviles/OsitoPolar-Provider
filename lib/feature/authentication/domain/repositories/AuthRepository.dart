@@ -11,5 +11,8 @@ abstract class AuthRepository {
     required String password,
   });
 
-// TODO: Añadir un método signUp
+  Future<Either<Failure, void>> signUp({
+    required String username,
+    required String password,
+  });
 }

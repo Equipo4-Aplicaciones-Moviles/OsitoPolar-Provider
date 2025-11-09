@@ -3,13 +3,14 @@ import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSource.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentRepository.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 /// La "IMPLEMENTACIÓN" del contrato EquipmentRepository.
 class EquipmentRepositoryImpl implements EquipmentRepository {
   final EquipmentRemoteDataSource remoteDataSource;
+  final SharedPreferences prefs; // <-- Inyectado
   // TODO: Añadir localDataSource para caching si es necesario
 
-  EquipmentRepositoryImpl({required this.remoteDataSource});
+  EquipmentRepositoryImpl({required this.remoteDataSource,required this.prefs,});
 
   @override
   Future<Either<Failure, List<EquipmentEntity>>> getEquipments() async {

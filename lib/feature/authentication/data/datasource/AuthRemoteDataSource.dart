@@ -1,7 +1,7 @@
 // --- TUS NOMBRES DE ARCHIVO 'PascalCase' ---
 import 'package:osito_polar_app/feature/authentication/data/models/SignInRequestModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/models/AuthenticatedUserModel.dart';
-
+import 'package:osito_polar_app/feature/authentication/data/models/SignUpRequestModel.dart';
 // --- ¡ESTE ES EL ARCHIVO CORREGIDO! ---
 //
 // Esta es la "Interfaz" (el contrato).
@@ -15,4 +15,8 @@ abstract class AuthRemoteDataSource {
   Future<AuthenticatedUserModel> signIn(SignInRequestModel request);
 
 // TODO: Añadir un método signUp aquí
+
+  /// Llama al endpoint POST /api/v1/authentication/sign-up
+  /// Tu API (Swagger) devuelve un 200 OK (void)
+  Future<void> signUp(SignUpRequestModel request);
 }

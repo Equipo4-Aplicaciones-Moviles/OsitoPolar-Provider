@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/ui/widgets/OsitoPolarFooter.dart';
 import '../../../../core/ui/widgets/OsitoPolarTopBar.dart';
-
+import 'package:provider/provider.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
+// ---
+/// Pantalla de Registro para Providers (Empresas).
 /// Pantalla de Registro para Providers (Empresas).
 class ProviderRegisterPage extends StatefulWidget {
   // Callbacks para la navegación
-  final Function(String businessName, String username, String password)
-  onSignUpClicked;
+  // --- ¡MODIFICADO! El onSignUpClicked ya no es necesario ---
+  // final Function(String businessName, String username, String password) onSignUpClicked;
   final VoidCallback onSignInClicked;
 
   const ProviderRegisterPage({
     super.key,
-    required this.onSignUpClicked,
+    // required this.onSignUpClicked,
     required this.onSignInClicked,
   });
 
@@ -22,7 +25,7 @@ class ProviderRegisterPage extends StatefulWidget {
 
 class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
   // Controladores para los campos de texto
-  final _businessNameController = TextEditingController();
+  final _businessNameController = TextEditingController(); // TODO: Tu API solo pide username/password
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -39,6 +42,21 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    // --- ¡AÑADIDO! Escuchamos al nuevo provider ---
+    final provider = context.watch<RegisterProvider>();
+    final state = provider.state;
+
+    // --- ¡AÑADIDO! Listener para navegar ---
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (state == RegisterState.success) {
+        // Si el registro fue exitoso, volvemos al Login
+        // y reseteamos el estado.
+        Navigator.pop(context);
+        context.read<RegisterProvider>().resetState();
+        // TODO: Mostrar un SnackBar de "¡Usuario creado! Inicia sesión."
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: OsitoPolarTopBar(
@@ -85,17 +103,20 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                       _buildTextField(
                         controller: _businessNameController,
                         labelText: 'Business name',
+                        isEnabled: state != RegisterState.loading,
                       ),
                       const SizedBox(height: 16.0),
                       _buildTextField(
                         controller: _usernameController,
                         labelText: 'Username',
+                        isEnabled: state != RegisterState.loading,
                       ),
                       const SizedBox(height: 16.0),
                       _buildPasswordField(
                         controller: _passwordController,
                         labelText: 'Password',
                         isObscured: _obscurePassword,
+                        isEnabled: state != RegisterState.loading,
                         onToggleVisibility: () {
                           setState(() {
                             _obscurePassword = !_obscurePassword;
@@ -110,7 +131,10 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                         children: [
                           Checkbox(
                             value: _rememberMe,
-                            onChanged: (bool? value) {
+                            // Deshabilitado mientras carga
+                            onChanged: state == RegisterState.loading
+                                ? null
+                                : (bool? value) {
                               setState(() {
                                 _rememberMe = value ?? false;
                               });
@@ -135,9 +159,14 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
                       // --- BOTÓN "SIGN UP" ---
                       ElevatedButton(
-                        onPressed: () {
-                          widget.onSignUpClicked(
-                            _businessNameController.text,
+                        // --- ¡MODIFICADO! ---
+                        onPressed: state == RegisterState.loading
+                            ? null
+                            : () {
+                          // TODO: Añadir validación (ej. que contraseñas no estén vacías)
+                          // NOTA: Tu API solo pide username/password, no businessName
+                          //      ¡Asegúrate de que esto sea correcto!
+                          context.read<RegisterProvider>().signUp(
                             _usernameController.text,
                             _passwordController.text,
                           );
@@ -150,7 +179,13 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                         ),
-                        child: const Text(
+                        // --- ¡MODIFICADO! Mostramos spinner ---
+                        child: state == RegisterState.loading
+                            ? const CircularProgressIndicator(
+                          valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                            : const Text(
                           'Sign Up',
                           style: TextStyle(
                             fontFamily: 'Inter',
@@ -159,7 +194,23 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32.0),
+                      const SizedBox(height: 16.0),
+
+                      // --- ¡AÑADIDO! Mensaje de Error ---
+                      if (state == RegisterState.error)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            provider.errorMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 16.0),
 
                       // --- ENLACE A "SIGN IN" ---
                       Row(
@@ -173,7 +224,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                             ),
                           ),
                           TextButton(
-                            onPressed: widget.onSignInClicked,
+                            onPressed: state == RegisterState.loading ? null : widget.onSignInClicked,
                             child: const Text(
                               'Login', // El diseño dice 'Login'
                               style: TextStyle(
@@ -200,9 +251,11 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
+    bool isEnabled = true, // Añadido
   }) {
     return TextField(
       controller: controller,
+      enabled: isEnabled, // Aplicado
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
@@ -242,10 +295,12 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     required String labelText,
     required bool isObscured,
     required VoidCallback onToggleVisibility,
+    bool isEnabled = true, // Añadido
   }) {
     return TextField(
       controller: controller,
       obscureText: isObscured,
+      enabled: isEnabled, // Aplicado
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
