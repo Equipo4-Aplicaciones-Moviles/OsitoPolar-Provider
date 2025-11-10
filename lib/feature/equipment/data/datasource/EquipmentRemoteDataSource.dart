@@ -10,5 +10,9 @@ abstract class EquipmentRemoteDataSource {
   /// Llama al endpoint POST /api/v1/equipments
   Future<EquipmentModel> createEquipment(CreateEquipmentModel equipment);
 
+  /// Llama al endpoint GET /api/v1/equipments/{equipmentId}
+  Future<EquipmentModel> getEquipmentById(int equipmentId);
+
+
 // TODO: Añadir métodos para getEquipmentById, createEquipment, etc.
 }

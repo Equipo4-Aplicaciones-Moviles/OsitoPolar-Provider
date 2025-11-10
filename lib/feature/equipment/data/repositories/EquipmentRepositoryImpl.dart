@@ -1,26 +1,29 @@
 import 'package:dartz/dartz.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
-import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSource.dart';
+import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentRepository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-/// La "IMPLEMENTACIÓN" del contrato EquipmentRepository.
+import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
+
+
 class EquipmentRepositoryImpl implements EquipmentRepository {
   final EquipmentRemoteDataSource remoteDataSource;
-  final SharedPreferences prefs; // <-- Inyectado
-  // TODO: Añadir localDataSource para caching si es necesario
+  final SharedPreferences prefs;
 
-  EquipmentRepositoryImpl({required this.remoteDataSource,required this.prefs,});
+  EquipmentRepositoryImpl({
+    required this.remoteDataSource,
+    required this.prefs,
+  });
 
+  // --- ¡MAPEADO ACTUALIZADO! ---
   @override
   Future<Either<Failure, List<EquipmentEntity>>> getEquipments() async {
+    print('--- Llamando al DataSource real para Equipos ---');
     try {
-      // 1. Llama al "cartero" (DataSource) para obtener los Modelos (con JSON)
       final equipmentModels = await remoteDataSource.getEquipments();
 
-      // 2. Mapea la lista de Modelos (Data) a Entidades (Domain)
-      //    Esto es clave para desacoplar las capas.
       final equipmentEntities = equipmentModels
           .map((model) => EquipmentEntity(
         id: model.id,
@@ -31,18 +34,25 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         status: model.status,
         currentTemperature: model.currentTemperature,
         ownerId: model.ownerId,
+        locationName: model.locationName,
+        // --- ¡AÑADIDO! ---
+        code: model.code,
+        manufacturer: model.manufacturer,
+        energyConsumptionCurrent: model.energyConsumptionCurrent,
+        technicalDetails: model.technicalDetails,
+        notes: model.notes,
       ))
           .toList();
 
-      // 3. Retorna el éxito (Right) con la lista de Entidades Puras
+      print('--- Llamada real exitosa. ${equipmentEntities.length} equipos encontrados. ---');
       return Right(equipmentEntities);
+
     } on Exception {
-      // 4. Si el "cartero" falla, retorna un fracaso (Left)
-      // TODO: Manejar diferentes excepciones (ServerException, NetworkException)
       return Left(ServerFailure());
     }
   }
 
+  // --- ¡MAPEADO ACTUALIZADO! ---
   @override
   Future<Either<Failure, EquipmentEntity>> createEquipment({
     required String name,
@@ -97,7 +107,6 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         energyConsumptionAverage: energyConsumptionAverage,
       );
 
-
       // 2. Llama al "cartero" (DataSource)
       final newEquipmentModel = await remoteDataSource.createEquipment(requestModel);
 
@@ -111,13 +120,53 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         status: newEquipmentModel.status,
         currentTemperature: newEquipmentModel.currentTemperature,
         ownerId: newEquipmentModel.ownerId,
+        locationName: newEquipmentModel.locationName,
+        // --- ¡AÑADIDO! ---
+        code: newEquipmentModel.code,
+        manufacturer: newEquipmentModel.manufacturer,
+        energyConsumptionCurrent: newEquipmentModel.energyConsumptionCurrent,
+        technicalDetails: newEquipmentModel.technicalDetails,
+        notes: newEquipmentModel.notes,
       );
 
       // 4. Retorna el éxito (Right)
       return Right(equipmentEntity);
-
     } on Exception {
       // 5. Si el "cartero" falla, retorna un fracaso (Left)
+      return Left(ServerFailure());
+    }
+  }
+
+  // --- ¡MAPEADO ACTUALIZADO! ---
+  @override
+  Future<Either<Failure, EquipmentEntity>> getEquipmentById(int equipmentId) async {
+    try {
+      // 1. Llama al "cartero" (DataSource)
+      final equipmentModel = await remoteDataSource.getEquipmentById(equipmentId);
+
+      // 2. Mapea el Modelo (Data) a una Entidad (Domain)
+      final equipmentEntity = EquipmentEntity(
+        id: equipmentModel.id,
+        name: equipmentModel.name,
+        type: equipmentModel.type,
+        model: equipmentModel.model,
+        serialNumber: equipmentModel.serialNumber,
+        status: equipmentModel.status,
+        currentTemperature: equipmentModel.currentTemperature,
+        ownerId: equipmentModel.ownerId,
+        locationName: equipmentModel.locationName,
+        // --- ¡AÑADIDO! ---
+        code: equipmentModel.code,
+        manufacturer: equipmentModel.manufacturer,
+        energyConsumptionCurrent: equipmentModel.energyConsumptionCurrent,
+        technicalDetails: equipmentModel.technicalDetails,
+        notes: equipmentModel.notes,
+      );
+
+      // 3. Retorna el éxito (Right)
+      return Right(equipmentEntity);
+    } on Exception {
+      // 4. Si el "cartero" falla, retorna un fracaso (Left)
       return Left(ServerFailure());
     }
   }

@@ -11,6 +11,17 @@ class EquipmentEntity extends Equatable {
   final String status;
   final double currentTemperature;
   final int ownerId;
+  final String locationName;
+
+  // --- ¡CAMPOS AÑADIDOS! ---
+  final String code;
+  final String manufacturer;
+  final double energyConsumptionCurrent;
+  final String technicalDetails;
+  final String notes;
+  // (Campos 'falsos' que la UI necesita pero la API no da)
+  final String voltage = "220 V"; // (Valor Falso)
+  final String refrigerant = "R-134a"; // (Valor Falso)
 
   const EquipmentEntity({
     required this.id,
@@ -21,6 +32,13 @@ class EquipmentEntity extends Equatable {
     required this.status,
     required this.currentTemperature,
     required this.ownerId,
+    required this.locationName,
+    // --- ¡AÑADIDO! ---
+    required this.code,
+    required this.manufacturer,
+    required this.energyConsumptionCurrent,
+    required this.technicalDetails,
+    required this.notes,
   });
 
   @override
@@ -32,6 +50,13 @@ class EquipmentEntity extends Equatable {
     serialNumber,
     status,
     currentTemperature,
-    ownerId
+    ownerId,
+    locationName,
+    // --- ¡AÑADIDO! ---
+    code,
+    manufacturer,
+    energyConsumptionCurrent,
+    technicalDetails,
+    notes,
   ];
 }

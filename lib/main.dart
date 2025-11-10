@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 // --- Providers ---
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
 // ¡NUEVO! Importamos el Provider del Home
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
 
@@ -42,6 +43,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => sl<AddEquipmentProvider>(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => sl<EquipmentDetailProvider>(),
         ),
       ],
       child: const MyApp(),

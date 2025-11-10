@@ -6,6 +6,7 @@ import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntit
 abstract class EquipmentRepository {
   /// Obtiene la lista de equipos del 'Provider' (Empresa)
   Future<Either<Failure, List<EquipmentEntity>>> getEquipments();
+  Future<Either<Failure, EquipmentEntity>> getEquipmentById(int equipmentId);
 
 // TODO: Añadir getEquipmentById, etc.
   Future<Either<Failure, EquipmentEntity>> createEquipment({
@@ -33,4 +34,5 @@ abstract class EquipmentRepository {
     required double energyConsumptionCurrent,
     required double energyConsumptionAverage,
   });
+
 }

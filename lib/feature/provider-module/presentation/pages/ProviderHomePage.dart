@@ -71,12 +71,19 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       body: _buildBody(context, provider, state),
 
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // 2. Navega a la nueva ruta que vamos a activar en main.dart
-          Navigator.pushNamed(context, '/provider_add_equipment');
+        onPressed: () async { // 1. Convertimos el onPressed a 'async'
+          // 2. Navega a la nueva ruta Y ESPERA a que se cierre (con 'await')
+          await Navigator.pushNamed(context, '/provider_add_equipment');
+
+          // 3. CUANDO VUELVE (después del 'await'),
+          //    forzamos al provider a recargar los datos de la API.
+          //    Usamos 'mounted' para asegurarnos de que el widget aún existe.
+          if (mounted) {
+            context.read<ProviderHomeProvider>().loadDashboardData();
+          }
         },
-        backgroundColor: AppColors.primaryButton, // Tu color azul de marca
-        foregroundColor: AppColors.buttonLabel, // Color blanco
+        backgroundColor: AppColors.primaryButton,
+        foregroundColor: AppColors.buttonLabel,
         tooltip: 'Añadir Equipo',
         child: const Icon(Icons.add),
       ),
@@ -218,7 +225,11 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       child: InkWell(
         onTap: () {
           // TODO: Pasar el 'equipment.id' a la página de detalle
-          Navigator.pushNamed(context, '/provider_equipment_detail');
+          Navigator.pushNamed(
+            context,
+            '/provider_equipment_detail',
+            arguments: equipment.id, // <-- ¡AQUÍ!
+          );
         },
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(
