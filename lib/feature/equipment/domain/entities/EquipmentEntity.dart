@@ -22,6 +22,7 @@ class EquipmentEntity extends Equatable {
   // (Campos 'falsos' que la UI necesita pero la API no da)
   final String voltage = "220 V"; // (Valor Falso)
   final String refrigerant = "R-134a"; // (Valor Falso)
+  final String ownershipType;
 
   const EquipmentEntity({
     required this.id,
@@ -39,6 +40,7 @@ class EquipmentEntity extends Equatable {
     required this.energyConsumptionCurrent,
     required this.technicalDetails,
     required this.notes,
+    required this.ownershipType,
   });
 
   @override
@@ -58,5 +60,6 @@ class EquipmentEntity extends Equatable {
     energyConsumptionCurrent,
     technicalDetails,
     notes,
+    ownershipType,
   ];
 }

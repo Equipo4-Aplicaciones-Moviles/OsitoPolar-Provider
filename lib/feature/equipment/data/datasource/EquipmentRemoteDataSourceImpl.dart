@@ -167,4 +167,46 @@ class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
       throw Exception('No se pudo conectar al servidor.');
     }
   }
+
+  @override
+  Future<EquipmentModel> updateEquipment(
+      int equipmentId, CreateEquipmentModel equipment) async {
+    final uri = Uri.parse('$kBaseUrl/api/v1/equipments/$equipmentId');
+    print('Llamando a API (PUT): $uri');
+
+    final token = prefs.getString('auth_token');
+    if (token == null) {
+      throw Exception('Token no encontrado');
+    }
+
+    try {
+      final response = await client.put(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: equipment.toJson(), // Enviamos el JSON actualizado
+      );
+
+      print('Respuesta de Update Equipo: ${response.statusCode}');
+
+      // Tu API (Swagger) dice que devuelve 200 (OK)
+      if (response.statusCode == 200) {
+        // Devuelve el equipo actualizado
+        return EquipmentModel.fromJson(response.body);
+      } else if (response.statusCode == 404) {
+        throw Exception('Equipo no encontrado (404)');
+      } else if (response.statusCode == 400) {
+        print('Error de API (400): ${response.body}');
+        throw Exception('Error de validación: ${response.statusCode}');
+      } else {
+        print('Error de API: ${response.body}');
+        throw Exception('Error al actualizar el equipo: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error de red: $e');
+      throw Exception('No se pudo conectar al servidor.');
+    }
+  }
 }

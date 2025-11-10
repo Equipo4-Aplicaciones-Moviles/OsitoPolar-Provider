@@ -355,10 +355,19 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                       Expanded(
                         child: IconButton(
                           icon: const Icon(Icons.edit, size: 20),
-                          onPressed: () {
-                            // TODO: ¡Acción 2! Navegar a 'AddEquipmentPage'
-                            // (¡Pero esta vez pasándole el 'equipment.id'!)
-                            Navigator.pushNamed(context, '/provider_add_equipment');
+                          onPressed: () async {
+                            // 1. Navega a la pantalla de Añadir/Editar
+                            // 2. ¡LE PASA EL ID DEL EQUIPO!
+                            await Navigator.pushNamed(
+                              context,
+                              '/provider_add_equipment',
+                              arguments: equipment.id, // <-- ¡LA CLAVE!
+                            );
+
+                            // 3. Cuando vuelve, refresca la lista
+                            if (mounted) {
+                              provider.loadDashboardData();
+                            }
                           },
                           style: IconButton.styleFrom(
                             backgroundColor: AppColors.primaryButton,

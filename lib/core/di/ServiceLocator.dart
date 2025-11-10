@@ -25,6 +25,7 @@ import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEqui
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentByIdUseCase.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/DeleteEquipmentUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/UpdateEquipmentUseCase.dart';
 
 final sl = GetIt.instance;
 
@@ -84,6 +85,7 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => CreateEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => GetEquipmentByIdUseCase(sl()));
   sl.registerLazySingleton(() => DeleteEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateEquipmentUseCase(sl()));
   // A. Providers (Depende de 'UseCases')
   sl.registerFactory(
         () => ProviderHomeProvider(
@@ -93,7 +95,10 @@ Future<void> setupLocator() async {
   );
 
   sl.registerFactory(
-        () => AddEquipmentProvider(createEquipmentUseCase: sl()),
+        () => AddEquipmentProvider(
+            createEquipmentUseCase: sl(),
+            updateEquipmentUseCase: sl(), // <-- ¡AÑADIDO!
+            getEquipmentByIdUseCase: sl(), ),
   );
   sl.registerFactory(
         () => EquipmentDetailProvider(getEquipmentByIdUseCase: sl()),

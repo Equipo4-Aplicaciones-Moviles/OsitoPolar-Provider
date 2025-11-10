@@ -121,7 +121,13 @@ class MyApp extends StatelessWidget {
 
         // --- ¡AÑADIDO! (Pero comentado) ---
         // Todavía no hemos creado la página, pero ya tenemos la ruta
-        '/provider_add_equipment': (context) => const AddEquipmentPage(),
+        '/provider_add_equipment': (context) {
+          // 2. Lee los argumentos (puede ser 'null' si es "Crear")
+          final equipmentId = ModalRoute.of(context)!.settings.arguments as int?;
+
+          // 3. Pasa el ID (que puede ser 'null') a la página
+          return AddEquipmentPage(equipmentId: equipmentId);
+        },
       },
     );
   }

@@ -41,6 +41,7 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         energyConsumptionCurrent: model.energyConsumptionCurrent,
         technicalDetails: model.technicalDetails,
         notes: model.notes,
+        ownershipType: model.ownershipType,
       ))
           .toList();
 
@@ -54,85 +55,46 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
 
   // --- ¡MAPEADO ACTUALIZADO! ---
   @override
-  Future<Either<Failure, EquipmentEntity>> createEquipment({
-    required String name,
-    required String type,
-    required String model,
-    required String serialNumber,
-    required int ownerId,
-    required String code,
-    required String notes,
-    required String ownerType,
-    required String locationName,
-    required String manufacturer,
-    required String ownershipType,
-    required String locationAddress,
-    required String technicalDetails,
-    required String energyConsumptionUnit,
-    required double cost,
-    required double currentTemperature,
-    required double setTemperature,
-    required double optimalTemperatureMin,
-    required double optimalTemperatureMax,
-    required double locationLatitude,
-    required double locationLongitude,
-    required double energyConsumptionCurrent,
-    required double energyConsumptionAverage,
-  }) async {
+  Future<Either<Failure, EquipmentEntity>> createEquipment(
+      Map<String, dynamic> equipmentData) async {
     try {
-      // 1. Convierte los datos puros en el Modelo de Request
+      // 1. Convierte el Map del formulario en el Modelo de Request
       final requestModel = CreateEquipmentModel(
-        name: name,
-        type: type,
-        model: model,
-        serialNumber: serialNumber,
-        ownerId: ownerId,
-        code: code,
-        notes: notes,
-        ownerType: ownerType,
-        locationName: locationName,
-        manufacturer: manufacturer,
-        ownershipType: ownershipType,
-        locationAddress: locationAddress,
-        technicalDetails: technicalDetails,
-        energyConsumptionUnit: energyConsumptionUnit,
-        cost: cost,
-        currentTemperature: currentTemperature,
-        setTemperature: setTemperature,
-        optimalTemperatureMin: optimalTemperatureMin,
-        optimalTemperatureMax: optimalTemperatureMax,
-        locationLatitude: locationLatitude,
-        locationLongitude: locationLongitude,
-        energyConsumptionCurrent: energyConsumptionCurrent,
-        energyConsumptionAverage: energyConsumptionAverage,
+        name: equipmentData['name'],
+        type: equipmentData['type'],
+        model: equipmentData['model'],
+        serialNumber: equipmentData['serialNumber'],
+        ownerId: equipmentData['ownerId'],
+        code: equipmentData['code'],
+        notes: equipmentData['notes'],
+        ownerType: equipmentData['ownerType'],
+        locationName: equipmentData['locationName'],
+        manufacturer: equipmentData['manufacturer'],
+        ownershipType: equipmentData['ownershipType'],
+        locationAddress: equipmentData['locationAddress'],
+        technicalDetails: equipmentData['technicalDetails'],
+        energyConsumptionUnit: equipmentData['energyConsumptionUnit'],
+        cost: equipmentData['cost'],
+        currentTemperature: equipmentData['currentTemperature'],
+        setTemperature: equipmentData['setTemperature'],
+        optimalTemperatureMin: equipmentData['optimalTemperatureMin'],
+        optimalTemperatureMax: equipmentData['optimalTemperatureMax'],
+        locationLatitude: equipmentData['locationLatitude'],
+        locationLongitude: equipmentData['locationLongitude'],
+        energyConsumptionCurrent: equipmentData['energyConsumptionCurrent'],
+        energyConsumptionAverage: equipmentData['energyConsumptionAverage'],
       );
 
       // 2. Llama al "cartero" (DataSource)
-      final newEquipmentModel = await remoteDataSource.createEquipment(requestModel);
+      final newEquipmentModel =
+      await remoteDataSource.createEquipment(requestModel);
 
-      // 3. Mapea el Modelo (Respuesta de la API) a una Entidad (para la UI)
-      final equipmentEntity = EquipmentEntity(
-        id: newEquipmentModel.id,
-        name: newEquipmentModel.name,
-        type: newEquipmentModel.type,
-        model: newEquipmentModel.model,
-        serialNumber: newEquipmentModel.serialNumber,
-        status: newEquipmentModel.status,
-        currentTemperature: newEquipmentModel.currentTemperature,
-        ownerId: newEquipmentModel.ownerId,
-        locationName: newEquipmentModel.locationName,
-        // --- ¡AÑADIDO! ---
-        code: newEquipmentModel.code,
-        manufacturer: newEquipmentModel.manufacturer,
-        energyConsumptionCurrent: newEquipmentModel.energyConsumptionCurrent,
-        technicalDetails: newEquipmentModel.technicalDetails,
-        notes: newEquipmentModel.notes,
-      );
+      // 3. Mapea el Modelo a una Entidad
+      final equipmentEntity = _mapModelToEntity(newEquipmentModel);
 
       // 4. Retorna el éxito (Right)
       return Right(equipmentEntity);
     } on Exception {
-      // 5. Si el "cartero" falla, retorna un fracaso (Left)
       return Left(ServerFailure());
     }
   }
@@ -161,6 +123,7 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         energyConsumptionCurrent: equipmentModel.energyConsumptionCurrent,
         technicalDetails: equipmentModel.technicalDetails,
         notes: equipmentModel.notes,
+        ownershipType: equipmentModel.ownershipType,
       );
 
       // 3. Retorna el éxito (Right)
@@ -184,5 +147,75 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
       // 3. Si el "cartero" falla, retorna un fracaso (Left)
       return Left(ServerFailure());
     }
+  }
+
+
+  // --- ¡MÉTODO AÑADIDO! ---
+  @override
+  Future<Either<Failure, EquipmentEntity>> updateEquipment(
+      int equipmentId, Map<String, dynamic> equipmentData) async {
+    try {
+      // 1. Convierte el Map del formulario en el Modelo de Request
+      //    (Reutilizamos el 'CreateEquipmentModel' para el PUT)
+      final requestModel = CreateEquipmentModel(
+        name: equipmentData['name'],
+        type: equipmentData['type'],
+        model: equipmentData['model'],
+        serialNumber: equipmentData['serialNumber'],
+        ownerId: equipmentData['ownerId'],
+        code: equipmentData['code'],
+        notes: equipmentData['notes'],
+        ownerType: equipmentData['ownerType'],
+        locationName: equipmentData['locationName'],
+        manufacturer: equipmentData['manufacturer'],
+        ownershipType: equipmentData['ownershipType'],
+        locationAddress: equipmentData['locationAddress'],
+        technicalDetails: equipmentData['technicalDetails'],
+        energyConsumptionUnit: equipmentData['energyConsumptionUnit'],
+        cost: equipmentData['cost'],
+        currentTemperature: equipmentData['currentTemperature'],
+        setTemperature: equipmentData['setTemperature'],
+        optimalTemperatureMin: equipmentData['optimalTemperatureMin'],
+        optimalTemperatureMax: equipmentData['optimalTemperatureMax'],
+        locationLatitude: equipmentData['locationLatitude'],
+        locationLongitude: equipmentData['locationLongitude'],
+        energyConsumptionCurrent: equipmentData['energyConsumptionCurrent'],
+        energyConsumptionAverage: equipmentData['energyConsumptionAverage'],
+      );
+
+      // 2. Llama al "cartero" (DataSource) con el ID
+      final updatedEquipmentModel =
+      await remoteDataSource.updateEquipment(equipmentId, requestModel);
+
+      // 3. Mapea el Modelo a una Entidad
+      final equipmentEntity = _mapModelToEntity(updatedEquipmentModel);
+
+      // 4. Retorna el éxito (Right)
+      return Right(equipmentEntity);
+    } on Exception {
+      return Left(ServerFailure());
+    }
+  }
+
+  // --- ¡HELPER AÑADIDO! ---
+  /// Helper privado para mapear un Modelo (Data) a una Entidad (Domain)
+  EquipmentEntity _mapModelToEntity(EquipmentModel model) {
+    return EquipmentEntity(
+      id: model.id,
+      name: model.name,
+      type: model.type,
+      model: model.model,
+      serialNumber: model.serialNumber,
+      status: model.status,
+      currentTemperature: model.currentTemperature,
+      ownerId: model.ownerId,
+      locationName: model.locationName,
+      code: model.code,
+      manufacturer: model.manufacturer,
+      energyConsumptionCurrent: model.energyConsumptionCurrent,
+      technicalDetails: model.technicalDetails,
+      notes: model.notes,
+      ownershipType: model.ownershipType,
+    );
   }
 }

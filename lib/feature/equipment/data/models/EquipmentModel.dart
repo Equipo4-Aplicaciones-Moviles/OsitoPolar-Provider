@@ -18,6 +18,7 @@ class EquipmentModel {
   final double energyConsumptionCurrent;
   final String technicalDetails;
   final String notes;// (Tu API lo tiene)
+  final String ownershipType;
 
   EquipmentModel({
     required this.id,
@@ -35,6 +36,8 @@ class EquipmentModel {
     required this.energyConsumptionCurrent,
     required this.technicalDetails,
     required this.notes,
+    required this.ownershipType,
+
   });
 
   factory EquipmentModel.fromJson(String str) =>
@@ -58,6 +61,7 @@ class EquipmentModel {
     energyConsumptionCurrent: json['energyConsumptionCurrent']?.toDouble() ?? 0.0,
     technicalDetails: json['technicalDetails'] ?? 'N/A',
     notes: json['notes'] ?? 'N/A',
+    ownershipType: json['ownershipType'] ?? 'Owned', // <-- Añadido
   );
 
   static List<EquipmentModel> listFromMap(List<dynamic> list) =>

@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
+import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 
-/// Pantalla de Formulario para "Añadir un Nuevo Equipo".
+/// Pantalla de Formulario para "Añadir/Editar Equipo".
 class AddEquipmentPage extends StatefulWidget {
-  const AddEquipmentPage({super.key});
+  // --- ¡AÑADIDO! ---
+  // El ID del equipo que queremos editar.
+  // Es 'null' si estamos en modo "Crear".
+  final int? equipmentId;
+
+  const AddEquipmentPage({
+    super.key,
+    this.equipmentId, // <-- Parámetro de navegación
+  });
 
   @override
   State<AddEquipmentPage> createState() => _AddEquipmentPageState();
@@ -13,13 +22,10 @@ class AddEquipmentPage extends StatefulWidget {
 
 class _AddEquipmentPageState extends State<AddEquipmentPage> {
   // --- Controladores ---
-  // Campos Principales
   final _nameController = TextEditingController();
   final _modelController = TextEditingController();
   final _serialNumberController = TextEditingController();
   final _ownerIdController = TextEditingController();
-
-  // Campos Requeridos por el Error 400
   final _codeController = TextEditingController();
   final _notesController = TextEditingController();
   final _ownerTypeController = TextEditingController();
@@ -28,29 +34,43 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final _locationAddressController = TextEditingController();
   final _technicalDetailsController = TextEditingController();
   final _energyConsumptionUnitController = TextEditingController();
-
-  // Campos Numéricos (los inicializamos con '0' para evitar errores de parseo)
   final _costController = TextEditingController(text: '0.0');
   final _currentTemperatureController = TextEditingController(text: '0.0');
   final _setTemperatureController = TextEditingController(text: '0.0');
   final _optimalTemperatureMinController = TextEditingController(text: '-18.0');
   final _optimalTemperatureMaxController = TextEditingController(text: '-15.0');
-  // (Lat/Lng se envían como 0.0, no necesitamos controllers)
   final _energyConsumptionCurrentController = TextEditingController(text: '0.0');
   final _energyConsumptionAverageController = TextEditingController(text: '0.0');
 
   // --- Estado para los Dropdowns ---
-  // (Basado en tus Enums de C#: EEquipmentType y EOwnershipType)
   String? _selectedType;
   final List<String> _equipmentTypes = ['Freezer', 'ColdRoom', 'Refrigerator'];
-
   String? _selectedOwnership;
   final List<String> _ownershipTypes = ['Owned', 'Rented', 'Leased'];
 
+  bool get _isEditMode => widget.equipmentId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Limpiamos CUALQUIER estado anterior
+      context.read<AddEquipmentProvider>().clear();
+
+      if (_isEditMode) {
+        // Si nos pasaron un ID, le decimos al Provider que cargue los datos
+        print('Modo Edición: Cargando datos para ID ${widget.equipmentId}');
+        context.read<AddEquipmentProvider>().loadEquipmentForEdit(widget.equipmentId!);
+      } else {
+        // Modo Creación: (ya está limpio)
+        print('Modo Creación: Formulario nuevo');
+      }
+    });
+  }
 
   @override
   void dispose() {
-    // Damos dispose a TODOS los controllers
+    // (Tu dispose() está perfecto)
     _nameController.dispose();
     _modelController.dispose();
     _serialNumberController.dispose();
@@ -75,7 +95,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
   /// Método que se llama al presionar "Guardar"
   void _onSavePressed() {
-    // --- ¡VALIDACIÓN ACTUALIZADA! ---
+    // --- (La validación es la misma) ---
     if (_nameController.text.isEmpty ||
         _serialNumberController.text.isEmpty ||
         _ownerIdController.text.isEmpty ||
@@ -84,7 +104,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         _ownerTypeController.text.isEmpty ||
         _locationNameController.text.isEmpty ||
         _manufacturerController.text.isEmpty ||
-        // (Validamos los nuevos dropdowns)
         _selectedOwnership == null ||
         _selectedType == null ||
         _locationAddressController.text.isEmpty ||
@@ -100,74 +119,111 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
     }
 
     // --- ¡LLAMADA AL PROVIDER ACTUALIZADA! ---
-    context.read<AddEquipmentProvider>().createEquipment(
-      // Campos Principales
-      name: _nameController.text,
-      type: _selectedType!, // <-- Usamos el valor del Dropdown
-      model: _modelController.text,
-      serialNumber: _serialNumberController.text,
-      ownerId: int.tryParse(_ownerIdController.text) ?? 0,
+    // 1. Empaquetamos todos los controllers en un Map
+    final Map<String, dynamic> equipmentData = {
+      'name': _nameController.text,
+      'type': _selectedType!,
+      'model': _modelController.text,
+      'serialNumber': _serialNumberController.text,
+      'ownerId': int.tryParse(_ownerIdController.text) ?? 0,
+      'code': _codeController.text,
+      'notes': _notesController.text,
+      'ownerType': _ownerTypeController.text,
+      'locationName': _locationNameController.text,
+      'manufacturer': _manufacturerController.text,
+      'ownershipType': _selectedOwnership!,
+      'locationAddress': _locationAddressController.text,
+      'technicalDetails': _technicalDetailsController.text,
+      'energyConsumptionUnit': _energyConsumptionUnitController.text,
+      'cost': double.tryParse(_costController.text) ?? 0.0,
+      'currentTemperature': double.tryParse(_currentTemperatureController.text) ?? 0.0,
+      'setTemperature': double.tryParse(_setTemperatureController.text) ?? 0.0,
+      'optimalTemperatureMin': double.tryParse(_optimalTemperatureMinController.text) ?? 0.0,
+      'optimalTemperatureMax': double.tryParse(_optimalTemperatureMaxController.text) ?? 0.0,
+      'locationLatitude': 0.0, // (Seguimos enviando 0.0)
+      'locationLongitude': 0.0,
+      'energyConsumptionCurrent': double.tryParse(_energyConsumptionCurrentController.text) ?? 0.0,
+      'energyConsumptionAverage': double.tryParse(_energyConsumptionAverageController.text) ?? 0.0,
+    };
 
-      // Campos Requeridos (Strings)
-      code: _codeController.text,
-      notes: _notesController.text,
-      ownerType: _ownerTypeController.text,
-      locationName: _locationNameController.text,
-      manufacturer: _manufacturerController.text,
-      ownershipType: _selectedOwnership!, // <-- Usamos el valor del Dropdown
-      locationAddress: _locationAddressController.text,
-      technicalDetails: _technicalDetailsController.text,
-      energyConsumptionUnit: _energyConsumptionUnitController.text,
-
-      // Campos Requeridos (Numéricos)
-      cost: double.tryParse(_costController.text) ?? 0.0,
-      currentTemperature: double.tryParse(_currentTemperatureController.text) ?? 0.0,
-      setTemperature: double.tryParse(_setTemperatureController.text) ?? 0.0,
-      optimalTemperatureMin: double.tryParse(_optimalTemperatureMinController.text) ?? 0.0,
-      optimalTemperatureMax: double.tryParse(_optimalTemperatureMaxController.text) ?? 0.0,
-
-      // --- ¡SOLUCIÓN DE UX! ---
-      // Enviamos 0.0 para Lat/Lng. No se lo pedimos al usuario.
-      locationLatitude: 0.0,
-      locationLongitude: 0.0,
-
-      energyConsumptionCurrent: double.tryParse(_energyConsumptionCurrentController.text) ?? 0.0,
-      energyConsumptionAverage: double.tryParse(_energyConsumptionAverageController.text) ?? 0.0,
-    );
+    // 2. Llamamos al nuevo método 'saveEquipment'
+    context.read<AddEquipmentProvider>().saveEquipment(equipmentData);
   }
+
+  /// --- ¡HELPER ACTUALIZADO! ---
+  /// Rellena los campos del formulario cuando el Provider
+  /// termina de cargar los datos en Modo Edición.
+  void _populateFormFields(EquipmentEntity equipment) {
+    _nameController.text = equipment.name;
+    _modelController.text = equipment.model;
+    _serialNumberController.text = equipment.serialNumber;
+    _ownerIdController.text = equipment.ownerId.toString();
+    _codeController.text = equipment.code;
+    _notesController.text = equipment.notes;
+    _locationNameController.text = equipment.locationName;
+    _manufacturerController.text = equipment.manufacturer;
+    _technicalDetailsController.text = equipment.technicalDetails;
+    _currentTemperatureController.text = equipment.currentTemperature.toString();
+    _energyConsumptionCurrentController.text = equipment.energyConsumptionCurrent.toString();
+
+    // --- (Valores 'falsos' que rellenamos porque la API no los provee) ---
+    _ownerTypeController.text = "Client";
+    _locationAddressController.text = "Av. Principal 123";
+    _energyConsumptionUnitController.text = "kWh";
+    _costController.text = "0.0";
+    _setTemperatureController.text = "0.0";
+    _optimalTemperatureMinController.text = "-18.0";
+    _optimalTemperatureMaxController.text = "-15.0";
+    _energyConsumptionAverageController.text = "0.0";
+
+    // Manejamos los Dropdowns
+    if (_equipmentTypes.contains(equipment.type)) {
+      _selectedType = equipment.type;
+    }
+
+    // --- ¡BUG ARREGLADO! ---
+    //    Usamos 'equipment.ownershipType' (el campo real)
+    if (_ownershipTypes.contains(equipment.ownershipType)) {
+      _selectedOwnership = equipment.ownershipType;
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    // Escuchamos al provider para reaccionar a los cambios de estado (ej. spinner)
     final provider = context.watch<AddEquipmentProvider>();
     final state = provider.state;
 
-    // --- Listener para Efectos Secundarios (Snackbars, Navegación) ---
-    // Usamos addPostFrameCallback para manejar esto DESPUÉS del build
+    // --- Listener para Efectos Secundarios ---
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Usamos 'context.read' aquí para solo *actuar*
       final provider = context.read<AddEquipmentProvider>();
 
-      if (provider.state == AddEquipmentState.success) {
-        // ÉXITO: Mostrar SnackBar y volver al dashboard
+      // --- ¡LÓGICA DE EDICIÓN ACTUALIZADA! ---
+      if (state == AddEquipmentState.dataLoaded && provider.editingEquipment != null) {
+        _populateFormFields(provider.editingEquipment!);
+        // --- ¡EL BUG ESTÁ ARREGLADO AQUÍ! ---
+        provider.acknowledgeStateHandled();
+      }
+
+      if (state == AddEquipmentState.success) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(
-            content: Text('¡Equipo creado exitosamente!'),
+          ..showSnackBar(SnackBar(
+            content: Text(_isEditMode ? '¡Equipo actualizado!' : '¡Equipo creado!'),
             backgroundColor: Colors.green,
           ));
-        provider.resetState(); // Limpia el provider
-        Navigator.pop(context); // Vuelve a la pantalla anterior
+        provider.clear();
+        Navigator.pop(context); // Vuelve al dashboard
       }
-      if (provider.state == AddEquipmentState.error) {
-        // ERROR: Mostrar SnackBar con el error
+      if (state == AddEquipmentState.error) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(
             content: Text('Error: ${provider.errorMessage}'),
             backgroundColor: Colors.red,
           ));
-        provider.resetState(); // Limpia el provider para reintentar
+        // Resetea el estado para reintentar, ¡PERO MANTIENE EL MODO EDICIÓN!
+        provider.resetState();
       }
     });
 
@@ -180,11 +236,16 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         shadowColor: AppColors.cardBorder,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.iconColor),
-          onPressed: () => Navigator.pop(context),
+          // --- ¡AÑADIDO! Limpiamos el estado al salir ---
+          onPressed: () {
+            context.read<AddEquipmentProvider>().clear();
+            Navigator.pop(context);
+          },
         ),
-        title: const Text(
-          'Añadir Nuevo Equipo',
-          style: TextStyle(
+        title: Text(
+          // --- ¡TÍTULO DINÁMICO! ---
+          _isEditMode ? 'Editar Equipo' : 'Añadir Nuevo Equipo',
+          style: const TextStyle(
             color: AppColors.logoColor,
             fontWeight: FontWeight.bold,
             fontSize: 22,
@@ -193,7 +254,13 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         ),
       ),
       body: SingleChildScrollView(
-        child: Padding(
+        // Si el estado es 'loading' (cargando datos O guardando)
+        child: (state == AddEquipmentState.loading)
+            ? const Center(child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ))
+            : Padding(
           padding: const EdgeInsets.all(16.0),
           child: Card(
             elevation: 0,
@@ -208,7 +275,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- ¡FORMULARIO ACTUALIZADO CON DROPDOWNS! ---
+                  // --- ¡FORMULARIO ACTUALIZADO CON TODOS LOS CAMPOS! ---
 
                   // --- Sección Principal ---
                   _buildSectionTitle('Información Principal'),
@@ -410,9 +477,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                       valueColor:
                       AlwaysStoppedAnimation<Color>(Colors.white),
                     )
-                        : const Text(
-                      'Guardar Equipo',
-                      style: TextStyle(
+                        : Text(
+                      // --- ¡TEXTO DINÁMICO! ---
+                      _isEditMode ? 'Actualizar Equipo' : 'Guardar Equipo',
+                      style: const TextStyle(
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
