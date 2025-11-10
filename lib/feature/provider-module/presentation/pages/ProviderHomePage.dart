@@ -69,6 +69,20 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       drawer: const ProviderDrawer(),
       // 5. CONSTRUIMOS EL CUERPO BASADO EN EL ESTADO
       body: _buildBody(context, provider, state),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // 2. Navega a la nueva ruta que vamos a activar en main.dart
+          Navigator.pushNamed(context, '/provider_add_equipment');
+        },
+        backgroundColor: AppColors.primaryButton, // Tu color azul de marca
+        foregroundColor: AppColors.buttonLabel, // Color blanco
+        tooltip: 'Añadir Equipo',
+        child: const Icon(Icons.add),
+      ),
+
+
+
     );
   }
 
