@@ -170,4 +170,19 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
       return Left(ServerFailure());
     }
   }
+
+  @override
+  Future<Either<Failure, void>> deleteEquipment(int equipmentId) async {
+    try {
+      // 1. Llama al "cartero" (DataSource) para borrar
+      //    (No esperamos respuesta, es 'void')
+      await remoteDataSource.deleteEquipment(equipmentId);
+
+      // 2. Retorna el éxito (Right)
+      return const Right(null); // 'null' representa 'void'
+    } on Exception {
+      // 3. Si el "cartero" falla, retorna un fracaso (Left)
+      return Left(ServerFailure());
+    }
+  }
 }

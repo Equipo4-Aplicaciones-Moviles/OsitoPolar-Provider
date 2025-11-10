@@ -14,5 +14,8 @@ abstract class EquipmentRemoteDataSource {
   Future<EquipmentModel> getEquipmentById(int equipmentId);
 
 
+  /// Llama al endpoint DELETE /api/v1/equipments/{equipmentId}
+  Future<void> deleteEquipment(int equipmentId);
+
 // TODO: Añadir métodos para getEquipmentById, createEquipment, etc.
 }

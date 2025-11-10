@@ -35,4 +35,6 @@ abstract class EquipmentRepository {
     required double energyConsumptionAverage,
   });
 
+  Future<Either<Failure, void>> deleteEquipment(int equipmentId);
+
 }

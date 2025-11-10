@@ -45,15 +45,20 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
         backgroundColor: Colors.white,
         elevation: 1,
         shadowColor: AppColors.cardBorder,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.menu,
-            color: AppColors.iconColor,
-            size: 30,
-          ),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
+        leading: Builder(
+            builder: (BuildContext builderContext) { // 1. Usamos un nuevo 'context'
+              return IconButton(
+                icon: const Icon(
+                  Icons.menu,
+                  color: AppColors.iconColor,
+                  size: 30,
+                ),
+                onPressed: () {
+                  // 2. Usamos el 'builderContext' que SÍ está dentro del Scaffold
+                  Scaffold.of(builderContext).openDrawer();
+                },
+              );
+            }
         ),
         title: const Text(
           'OsitoPolar',

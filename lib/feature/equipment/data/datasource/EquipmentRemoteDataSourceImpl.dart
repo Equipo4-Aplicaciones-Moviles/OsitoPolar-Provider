@@ -128,4 +128,43 @@ class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
       throw Exception('No se pudo conectar al servidor.');
     }
   }
+
+  @override
+  Future<void> deleteEquipment(int equipmentId) async {
+    final uri = Uri.parse('$kBaseUrl/api/v1/equipments/$equipmentId');
+    print('Llamando a API (DELETE): $uri');
+
+    // Obtenemos el token (necesario para borrar)
+    final token = prefs.getString('auth_token');
+    if (token == null) {
+      throw Exception('Token no encontrado');
+    }
+
+    try {
+      final response = await client.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Respuesta de Delete Equipo: ${response.statusCode}');
+
+      // 3. Tu API (Swagger) dice que devuelve 204 (No Content)
+      if (response.statusCode == 204) {
+        // ¡Éxito! No hay cuerpo que devolver.
+        return;
+      } else if (response.statusCode == 404) {
+        throw Exception('Equipo no encontrado (404)');
+      } else {
+        // Error (400, 401, etc.)
+        print('Error de API: ${response.body}');
+        throw Exception('Error al borrar el equipo: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error de red: $e');
+      throw Exception('No se pudo conectar al servidor.');
+    }
+  }
 }

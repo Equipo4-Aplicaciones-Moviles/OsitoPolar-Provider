@@ -23,6 +23,7 @@ import 'package:osito_polar_app/feature/provider-module/presentation/pages/Provi
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmentPage.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/pages/MyEquipmentPage.dart';
 // ¡MODIFICADO! main() ahora es async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -116,6 +117,7 @@ class MyApp extends StatelessWidget {
         const ProviderClientsTechniciansPage(),
         '/provider_client_account': (context) =>
         const ProviderClientAccountPage(),
+        '/provider_my_equipments': (context) =>  MyEquipmentPage(),
 
         // --- ¡AÑADIDO! (Pero comentado) ---
         // Todavía no hemos creado la página, pero ya tenemos la ruta
