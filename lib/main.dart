@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 // --- Providers ---
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
 // ¡NUEVO! Importamos el Provider del Home
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
 
@@ -20,6 +21,9 @@ import 'package:osito_polar_app/feature/provider-module/presentation/pages/Provi
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
 
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmentPage.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/pages/MyEquipmentPage.dart';
 // ¡MODIFICADO! main() ahora es async
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +41,12 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => sl<RegisterProvider>(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => sl<AddEquipmentProvider>(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => sl<EquipmentDetailProvider>(),
         ),
       ],
       child: const MyApp(),
@@ -107,6 +117,17 @@ class MyApp extends StatelessWidget {
         const ProviderClientsTechniciansPage(),
         '/provider_client_account': (context) =>
         const ProviderClientAccountPage(),
+        '/provider_my_equipments': (context) =>  MyEquipmentPage(),
+
+        // --- ¡AÑADIDO! (Pero comentado) ---
+        // Todavía no hemos creado la página, pero ya tenemos la ruta
+        '/provider_add_equipment': (context) {
+          // 2. Lee los argumentos (puede ser 'null' si es "Crear")
+          final equipmentId = ModalRoute.of(context)!.settings.arguments as int?;
+
+          // 3. Pasa el ID (que puede ser 'null') a la página
+          return AddEquipmentPage(equipmentId: equipmentId);
+        },
       },
     );
   }

@@ -45,15 +45,20 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
         backgroundColor: Colors.white,
         elevation: 1,
         shadowColor: AppColors.cardBorder,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.menu,
-            color: AppColors.iconColor,
-            size: 30,
-          ),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
+        leading: Builder(
+            builder: (BuildContext builderContext) { // 1. Usamos un nuevo 'context'
+              return IconButton(
+                icon: const Icon(
+                  Icons.menu,
+                  color: AppColors.iconColor,
+                  size: 30,
+                ),
+                onPressed: () {
+                  // 2. Usamos el 'builderContext' que SÍ está dentro del Scaffold
+                  Scaffold.of(builderContext).openDrawer();
+                },
+              );
+            }
         ),
         title: const Text(
           'OsitoPolar',
@@ -69,6 +74,27 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       drawer: const ProviderDrawer(),
       // 5. CONSTRUIMOS EL CUERPO BASADO EN EL ESTADO
       body: _buildBody(context, provider, state),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async { // 1. Convertimos el onPressed a 'async'
+          // 2. Navega a la nueva ruta Y ESPERA a que se cierre (con 'await')
+          await Navigator.pushNamed(context, '/provider_add_equipment');
+
+          // 3. CUANDO VUELVE (después del 'await'),
+          //    forzamos al provider a recargar los datos de la API.
+          //    Usamos 'mounted' para asegurarnos de que el widget aún existe.
+          if (mounted) {
+            context.read<ProviderHomeProvider>().loadDashboardData();
+          }
+        },
+        backgroundColor: AppColors.primaryButton,
+        foregroundColor: AppColors.buttonLabel,
+        tooltip: 'Añadir Equipo',
+        child: const Icon(Icons.add),
+      ),
+
+
+
     );
   }
 
@@ -204,7 +230,11 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       child: InkWell(
         onTap: () {
           // TODO: Pasar el 'equipment.id' a la página de detalle
-          Navigator.pushNamed(context, '/provider_equipment_detail');
+          Navigator.pushNamed(
+            context,
+            '/provider_equipment_detail',
+            arguments: equipment.id, // <-- ¡AQUÍ!
+          );
         },
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(

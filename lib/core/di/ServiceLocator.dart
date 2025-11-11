@@ -20,6 +20,12 @@ import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentR
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
 
+import 'package:osito_polar_app/feature/equipment/domain/usecases/CreateEquipmentUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentByIdUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/DeleteEquipmentUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/UpdateEquipmentUseCase.dart';
 
 final sl = GetIt.instance;
 
@@ -53,6 +59,7 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => SignUpUseCase(sl()));
 
+
   // A. Providers (Depende de 'UseCases' y 'SharedPreferences')
   sl.registerFactory(
         () => ProviderLoginProvider(signInUseCase: sl(), prefs: sl()),
@@ -75,10 +82,26 @@ Future<void> setupLocator() async {
 
   // B. UseCases (Depende de 'EquipmentRepository')
   sl.registerLazySingleton(() => GetEquipmentsUseCase(sl()));
-
+  sl.registerLazySingleton(() => CreateEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => GetEquipmentByIdUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateEquipmentUseCase(sl()));
   // A. Providers (Depende de 'UseCases')
   sl.registerFactory(
-        () => ProviderHomeProvider(getEquipmentsUseCase: sl()),
+        () => ProviderHomeProvider(
+          getEquipmentsUseCase: sl(),
+          deleteEquipmentUseCase: sl(),),
+
+  );
+
+  sl.registerFactory(
+        () => AddEquipmentProvider(
+            createEquipmentUseCase: sl(),
+            updateEquipmentUseCase: sl(), // <-- ¡AÑADIDO!
+            getEquipmentByIdUseCase: sl(), ),
+  );
+  sl.registerFactory(
+        () => EquipmentDetailProvider(getEquipmentByIdUseCase: sl()),
   );
 
 }

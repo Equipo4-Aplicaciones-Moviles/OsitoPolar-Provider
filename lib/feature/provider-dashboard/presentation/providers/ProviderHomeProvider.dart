@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentUseCase.dart';
-
+import 'package:osito_polar_app/feature/equipment/domain/usecases/DeleteEquipmentUseCase.dart';
 /// Define los posibles estados de la UI para el Dashboard (Provider Home).
 enum ProviderHomeState {
   initial,
@@ -15,9 +15,10 @@ enum ProviderHomeState {
 class ProviderHomeProvider extends ChangeNotifier {
   final GetEquipmentsUseCase getEquipmentsUseCase;
   // TODO: Añadir aquí los UseCases para Clientes, Técnicos, etc.
-
+  final DeleteEquipmentUseCase deleteEquipmentUseCase;
   ProviderHomeProvider({
     required this.getEquipmentsUseCase,
+    required this.deleteEquipmentUseCase,
     // ...
   });
 
@@ -62,6 +63,43 @@ class ProviderHomeProvider extends ChangeNotifier {
     // Notifica a la UI sobre el nuevo estado (éxito o error)
     notifyListeners();
   }
+
+  Future<bool> deleteEquipment(int equipmentId) async {
+    // No ponemos el estado en 'loading' para no ocultar la lista,
+    // la UI mostrará su propio feedback (ej. un SnackBar)
+
+    final failureOrSuccess = await deleteEquipmentUseCase(equipmentId);
+
+    bool success = false; // Variable para rastrear el resultado
+
+    failureOrSuccess.fold(
+          (failure) {
+        // --- Caso de Error ---
+        _errorMessage = _mapFailureToMessage(failure);
+        // No cambiamos el estado principal, solo devolvemos el error
+        success = false;
+      },
+          (_) {
+        // --- Caso de Éxito ---
+        _errorMessage = ''; // Limpiamos errores anteriores
+        success = true;
+        // ¡No notificamos todavía!
+      },
+    );
+
+    if (success) {
+      // Si el 'delete' fue exitoso, VOLVEMOS a cargar la lista
+      // para que el equipo borrado desaparezca de la UI.
+      // 'loadDashboardData' se encargará de llamar a 'notifyListeners()'.
+      await loadDashboardData();
+    } else {
+      // Si falló, notificamos para que la UI muestre el error (si es necesario)
+      notifyListeners();
+    }
+
+    return success; // Devolvemos el resultado a la UI
+  }
+
 
   /// Convierte un objeto Failure en un mensaje legible para el usuario.
   String _mapFailureToMessage(Failure failure) {
