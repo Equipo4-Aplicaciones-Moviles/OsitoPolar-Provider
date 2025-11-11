@@ -5,7 +5,10 @@ import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntit
 import 'package:provider/provider.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart'; // (Usando tu 'PascalCase')
-
+import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
+import 'package:provider/provider.dart';
+import 'package:osito_polar_app/core/theme/app_colors.dart';
+import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart'; // (Usando tu 'PascalCase')
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
 
@@ -127,7 +130,8 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             // --- SECCIÓN: MANTENIMIENTOS ---
             _buildSectionTitle(context, 'Mantenimientos'),
             const SizedBox(height: 8),
-            _buildMaintenanceList(context), // (Por ahora, una lista falsa)
+            // --- ¡MODIFICADO! Pasamos la lista REAL ---
+            _buildMaintenanceList(context, provider.serviceRequests),
 
             // (Añadimos espacio al final para que el FAB no tape contenido)
             const SizedBox(height: 80),
@@ -455,34 +459,47 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
   }
 
   /// Helper para la tarjeta "Mantenimientos" (Datos falsos)
-  Widget _buildMaintenanceList(BuildContext context) {
-    // TODO: Reemplazar con datos reales de la API (ServiceRequests)
+  Widget _buildMaintenanceList(BuildContext context, List<ServiceRequestEntity> requests) {
+
+    if (requests.isEmpty) {
+      // Muestra un mensaje si la API no devuelve nada
+      return Card(
+        elevation: 0,
+        color: AppColors.cardBackground,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+          side: const BorderSide(color: AppColors.cardBorder, width: 1),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(
+            child: Text(
+              'No se encontraron mantenimientos.',
+              style: TextStyle(fontFamily: 'Inter', color: AppColors.textColor),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 280, // Altura fija para la tarjeta
-      child: PageView(
+      child: PageView.builder(
         controller: PageController(viewportFraction: 0.9), // Efecto carrusel
-        children: [
-          // Tarjeta de Mantenimiento 1 (Falsa)
-          Padding(
+        itemCount: requests.length,
+        itemBuilder: (context, index) {
+          final request = requests[index];
+          return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: _buildMaintenanceCard(
               context,
-              title: 'Cámara frigorífica modular',
-              client: 'Nahuel Barrera',
-              isPending: true,
+              title: request.title, // <-- ¡DATO REAL!
+              client: 'Cliente ID: ${request.clientId ?? 'N/A'}', // <-- ¡DATO REAL!
+              isPending: request.status.toLowerCase() == 'pending', // <-- ¡LÓGICA REAL!
             ),
-          ),
-          // Tarjeta de Mantenimiento 2 (Falsa)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: _buildMaintenanceCard(
-              context,
-              title: 'Vitrina Vertical VF-200',
-              client: 'Miyuki Marino S.A.',
-              isPending: false,
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -527,7 +544,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             const SizedBox(height: 8),
             // Cliente
             Text(
-              'Cliente: $client',
+              client,
               style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 14,

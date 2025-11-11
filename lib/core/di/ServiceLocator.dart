@@ -27,6 +27,13 @@ import 'package:osito_polar_app/feature/equipment/presentation/providers/Equipme
 import 'package:osito_polar_app/feature/equipment/domain/usecases/DeleteEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/UpdateEquipmentUseCase.dart';
 
+// --- ¡AÑADIDO! Importaciones del nuevo stack de ServiceRequest ---
+import 'package:osito_polar_app/feature/service_request/data/datasource/ServiceRequestRemoteDataSource.dart';
+import 'package:osito_polar_app/feature/service_request/data/datasource/ServiceRequestRemoteDataSourceImpl.dart';
+import 'package:osito_polar_app/feature/service_request/data/repositories/ServiceRequestRepositoryImpl.dart';
+import 'package:osito_polar_app/feature/service_request/domain/repositories/ServiceRequestRepository.dart';
+import 'package:osito_polar_app/feature/service_request/domain/usecases/GetServiceRequestsUseCase.dart';
+
 final sl = GetIt.instance;
 
 Future<void> setupLocator() async {
@@ -87,12 +94,6 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => DeleteEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => UpdateEquipmentUseCase(sl()));
   // A. Providers (Depende de 'UseCases')
-  sl.registerFactory(
-        () => ProviderHomeProvider(
-          getEquipmentsUseCase: sl(),
-          deleteEquipmentUseCase: sl(),),
-
-  );
 
   sl.registerFactory(
         () => AddEquipmentProvider(
@@ -102,6 +103,30 @@ Future<void> setupLocator() async {
   );
   sl.registerFactory(
         () => EquipmentDetailProvider(getEquipmentByIdUseCase: sl()),
+  );
+
+  // --- ¡AÑADIDO! ServiceRequest Stack ---
+
+  // D. DataSources
+  sl.registerLazySingleton<ServiceRequestRemoteDataSource>(
+        () => ServiceRequestRemoteDataSourceImpl(client: sl(), prefs: sl()),
+  );
+  // C. Repositories
+  sl.registerLazySingleton<ServiceRequestRepository>(
+        () => ServiceRequestRepositoryImpl(remoteDataSource: sl()),
+  );
+  // B. UseCases
+  sl.registerLazySingleton(() => GetServiceRequestsUseCase(sl()));
+
+  // A. Providers
+  // (Actualizamos el 'ProviderHomeProvider' que ya existía)
+  sl.registerFactory(
+    // --- ¡MODIFICADO! ---
+        () => ProviderHomeProvider(
+      getEquipmentsUseCase: sl(),
+      deleteEquipmentUseCase: sl(),
+      getServiceRequestsUseCase: sl(), // <-- ¡AÑADIDO!
+    ),
   );
 
 }

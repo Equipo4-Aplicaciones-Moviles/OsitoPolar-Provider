@@ -3,6 +3,9 @@ import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/DeleteEquipmentUseCase.dart';
+
+import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
+import 'package:osito_polar_app/feature/service_request/domain/usecases/GetServiceRequestsUseCase.dart';
 /// Define los posibles estados de la UI para el Dashboard (Provider Home).
 enum ProviderHomeState {
   initial,
@@ -16,9 +19,11 @@ class ProviderHomeProvider extends ChangeNotifier {
   final GetEquipmentsUseCase getEquipmentsUseCase;
   // TODO: Añadir aquí los UseCases para Clientes, Técnicos, etc.
   final DeleteEquipmentUseCase deleteEquipmentUseCase;
+  final GetServiceRequestsUseCase getServiceRequestsUseCase;
   ProviderHomeProvider({
     required this.getEquipmentsUseCase,
     required this.deleteEquipmentUseCase,
+    required this.getServiceRequestsUseCase,
     // ...
   });
 
@@ -33,7 +38,8 @@ class ProviderHomeProvider extends ChangeNotifier {
   List<EquipmentEntity> _equipments = [];
   List<EquipmentEntity> get equipments => _equipments;
   // TODO: Añadir listas para Clientes, Técnicos, etc.
-
+  List<ServiceRequestEntity> _serviceRequests = [];
+  List<ServiceRequestEntity> get serviceRequests => _serviceRequests;
   // --- Lógica de Negocio ---
 
   /// Método que la UI llamará en `initState()` para cargar todos los datos.
@@ -59,7 +65,19 @@ class ProviderHomeProvider extends ChangeNotifier {
     );
 
     // TODO: Llamar a los UseCases de Clientes, Técnicos, etc. aquí.
+    final failureOrServiceRequests = await getServiceRequestsUseCase();
 
+    // 4. Manejamos la respuesta de Mantenimientos
+    failureOrServiceRequests.fold(
+          (failure) {
+        _errorMessage = _mapFailureToMessage(failure);
+        _state = ProviderHomeState.error;
+      },
+          (requestList) {
+        _serviceRequests = requestList;
+        _state = ProviderHomeState.success; // ¡Éxito total!
+      },
+    );
     // Notifica a la UI sobre el nuevo estado (éxito o error)
     notifyListeners();
   }
