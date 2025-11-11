@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/ui/widgets/OsitoPolarFooter.dart';
-import '../../../../core/ui/widgets/OsitoPolarTopBar.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart'; // (Asegúrate de tener 'url_launcher' en pubspec.yaml)
+
+import 'package:osito_polar_app/core/theme/app_colors.dart';
+import 'package:osito_polar_app/core/ui/widgets/OsitoPolarTopBar.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
-// ---
-/// Pantalla de Registro para Providers (Empresas).
-/// Pantalla de Registro para Providers (Empresas).
+// Importamos los "Params" de los UseCases para saber qué datos necesitamos
+import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateRegistrationCheckoutUseCase.dart';
+
+/// Pantalla de Registro para Providers, ahora como un "wizard" de 3 pasos.
 class ProviderRegisterPage extends StatefulWidget {
-  // Callbacks para la navegación
-  // --- ¡MODIFICADO! El onSignUpClicked ya no es necesario ---
-  // final Function(String businessName, String username, String password) onSignUpClicked;
   final VoidCallback onSignInClicked;
 
   const ProviderRegisterPage({
     super.key,
-    // required this.onSignUpClicked,
     required this.onSignInClicked,
   });
 
@@ -24,36 +22,215 @@ class ProviderRegisterPage extends StatefulWidget {
 }
 
 class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
-  // Controladores para los campos de texto
-  final _businessNameController = TextEditingController(); // TODO: Tu API solo pide username/password
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  // --- Controladores para el Stepper ---
+  int _currentStep = 0;
 
-  bool _obscurePassword = true;
-  bool _rememberMe = false;
+  // --- Controladores para TODOS los campos de la API ---
+
+  // Paso 1: Cuenta
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+
+  // Paso 2: Empresa
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _companyNameController = TextEditingController();
+  final _taxIdController = TextEditingController(); // RUC/Identificador Fiscal
+
+  // Paso 3: Dirección
+  final _streetController = TextEditingController();
+  final _numberController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _postalCodeController = TextEditingController();
+  final _countryController = TextEditingController(text: 'Peru'); // Valor por defecto
 
   @override
   void dispose() {
-    _businessNameController.dispose();
     _usernameController.dispose();
-    _passwordController.dispose();
+    _emailController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _companyNameController.dispose();
+    _taxIdController.dispose();
+    _streetController.dispose();
+    _numberController.dispose();
+    _cityController.dispose();
+    _postalCodeController.dispose();
+    _countryController.dispose();
     super.dispose();
+  }
+
+  // --- Método para construir los 3 pasos del wizard ---
+  List<Step> _buildSteps(BuildContext context, RegisterState state) {
+    bool isLoading = (state == RegisterState.creatingCheckout ||
+        state == RegisterState.completingRegistration);
+
+    return [
+      // --- PASO 1: DATOS DE CUENTA ---
+      Step(
+        title: const Text('Cuenta'),
+        content: Column(
+          children: [
+            _buildTextField(
+              controller: _usernameController,
+              labelText: 'Username (para login)',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _emailController,
+              labelText: 'Email (para notificaciones)',
+              keyboardType: TextInputType.emailAddress,
+              isEnabled: !isLoading,
+            ),
+          ],
+        ),
+        isActive: _currentStep >= 0,
+        state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+      ),
+      // --- PASO 2: DATOS DE EMPRESA ---
+      Step(
+        title: const Text('Empresa'),
+        content: Column(
+          children: [
+            _buildTextField(
+              controller: _companyNameController,
+              labelText: 'Nombre de la Empresa',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _taxIdController,
+              labelText: 'RUC / ID Fiscal',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _firstNameController,
+              labelText: 'Nombre (Contacto)',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _lastNameController,
+              labelText: 'Apellido (Contacto)',
+              isEnabled: !isLoading,
+            ),
+          ],
+        ),
+        isActive: _currentStep >= 1,
+        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+      ),
+      // --- PASO 3: DIRECCIÓN DE FACTURACIÓN ---
+      Step(
+        title: const Text('Dirección'),
+        content: Column(
+          children: [
+            _buildTextField(
+              controller: _streetController,
+              labelText: 'Calle',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _numberController,
+              labelText: 'Número / Apartamento',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _cityController,
+              labelText: 'Ciudad',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _postalCodeController,
+              labelText: 'Código Postal',
+              isEnabled: !isLoading,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _countryController,
+              labelText: 'País',
+              isEnabled: !isLoading,
+            ),
+          ],
+        ),
+        isActive: _currentStep >= 2,
+        state: _currentStep == 2 ? StepState.editing : StepState.indexed,
+      ),
+    ];
+  }
+
+  // --- Método que se llama al presionar "Continuar" en el último paso ---
+  void _submitRegistration() {
+    final provider = context.read<RegisterProvider>();
+    if (provider.state == RegisterState.creatingCheckout) return;
+
+    // 1. Guardamos TODOS los datos del formulario en un Map
+    final formData = {
+      "username": _usernameController.text,
+      "email": _emailController.text,
+      "companyName": _companyNameController.text,
+      "taxId": _taxIdController.text,
+      "firstName": _firstNameController.text,
+      "lastName": _lastNameController.text,
+      "street": _streetController.text,
+      "number": _numberController.text,
+      "city": _cityController.text,
+      "postalCode": _postalCodeController.text,
+      "country": _countryController.text,
+    };
+
+    // 2. Creamos los 'Params' para la PRIMERA llamada
+    final checkoutParams = CheckoutParams(
+      planId: 4, // (Ejemplo, debes obtener esto de una selección de plan)
+      userType: "Provider",
+      // ¡IMPORTANTE! Añade '/#' para el ruteo de Flutter Web
+      successUrl: "http://localhost:3000/#/registration/success",
+      cancelUrl: "http://localhost:3000/#/registration/cancel",
+    );
+
+    // 3. Llamamos al provider
+    print("Iniciando Paso 1: Creando checkout...");
+    provider.createCheckout(formData, checkoutParams);
+  }
+
+  // --- Método para lanzar la URL de Stripe ---
+  Future<void> _launchStripeCheckout(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      // 'webOnlyWindowName: _self' intenta abrirlo en la misma pestaña
+      await launchUrl(uri, webOnlyWindowName: '_self');
+    } else {
+      // Si falla, muestra un error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo abrir la página de pago: $url')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- ¡AÑADIDO! Escuchamos al nuevo provider ---
     final provider = context.watch<RegisterProvider>();
     final state = provider.state;
+    final isLoading = (state == RegisterState.creatingCheckout ||
+        state == RegisterState.completingRegistration);
 
-    // --- ¡AÑADIDO! Listener para navegar ---
+    // --- LISTENER DE ESTADO ---
+    // Escucha cambios en el provider para actuar (como lanzar la URL)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (state == RegisterState.success) {
-        // Si el registro fue exitoso, volvemos al Login
-        // y reseteamos el estado.
-        Navigator.pop(context);
-        context.read<RegisterProvider>().resetState();
-        // TODO: Mostrar un SnackBar de "¡Usuario creado! Inicia sesión."
+      // ¡Reaccionamos solo a 'checkoutCreated'!
+      if (state == RegisterState.checkoutCreated) {
+        final url = provider.checkoutEntity?.checkoutUrl;
+        if (url != null) {
+          print("¡Paso 1 Exitoso! Redirigiendo a Stripe: $url");
+          // ¡Lanza la URL de Stripe!
+          _launchStripeCheckout(url);
+          // ¡NO reseteamos el estado! Necesitamos los datos guardados
+          // para el Paso 2.
+        }
       }
     });
 
@@ -64,7 +241,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
           // TODO: Implementar lógica del drawer
         },
       ),
-      bottomNavigationBar: const OsitoPolarFooter(),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -75,10 +251,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                 color: AppColors.cardBackground,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.0),
-                  side: const BorderSide(
-                    color: AppColors.cardBorder,
-                    width: 1,
-                  ),
+                  side: const BorderSide(color: AppColors.cardBorder, width: 1),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -88,150 +261,110 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Register',
+                        'Crear Cuenta de Proveedor',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.title,
                           fontWeight: FontWeight.bold,
-                          fontSize: 32,
+                          fontSize: 28,
                           fontFamily: 'Inter',
                         ),
                       ),
                       const SizedBox(height: 32.0),
 
-                      // --- CAMPOS DE TEXTO ---
-                      _buildTextField(
-                        controller: _businessNameController,
-                        labelText: 'Business name',
-                        isEnabled: state != RegisterState.loading,
-                      ),
-                      const SizedBox(height: 16.0),
-                      _buildTextField(
-                        controller: _usernameController,
-                        labelText: 'Username',
-                        isEnabled: state != RegisterState.loading,
-                      ),
-                      const SizedBox(height: 16.0),
-                      _buildPasswordField(
-                        controller: _passwordController,
-                        labelText: 'Password',
-                        isObscured: _obscurePassword,
-                        isEnabled: state != RegisterState.loading,
-                        onToggleVisibility: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
+                      // --- WIZARD (STEPPER) ---
+                      Stepper(
+                        currentStep: _currentStep,
+                        onStepTapped: (step) {
+                          if (!isLoading) setState(() => _currentStep = step);
                         },
-                      ),
-                      const SizedBox(height: 16.0),
+                        onStepContinue: () {
+                          if (_currentStep == 2) {
+                            // Si es el último paso, llama a la API
+                            _submitRegistration();
+                          } else if (!isLoading) {
+                            // Si no, avanza al siguiente paso
+                            setState(() => _currentStep += 1);
+                          }
+                        },
+                        onStepCancel: () {
+                          if (_currentStep > 0 && !isLoading) {
+                            setState(() => _currentStep -= 1);
+                          }
+                        },
+                        steps: _buildSteps(context, state),
+                        controlsBuilder: (context, details) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: Column(
+                              children: [
+                                // --- Muestra el Error ---
+                                if (state == RegisterState.error)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 16.0),
+                                    child: Text(
+                                      provider.errorMessage,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Colors.red),
+                                    ),
+                                  ),
 
-                      // --- CHECKBOX ---
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            value: _rememberMe,
-                            // Deshabilitado mientras carga
-                            onChanged: state == RegisterState.loading
-                                ? null
-                                : (bool? value) {
-                              setState(() {
-                                _rememberMe = value ?? false;
-                              });
-                            },
-                            activeColor: AppColors.primaryButton,
-                            checkColor: AppColors.buttonLabel,
-                            side: const BorderSide(
-                              color: AppColors.textColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          const Text(
-                            'Remember Me',
-                            style: TextStyle(
-                              color: AppColors.textColor,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24.0),
+                                // --- Muestra el Loading ---
+                                if (isLoading)
+                                  const Center(
+                                      child: CircularProgressIndicator()),
 
-                      // --- BOTÓN "SIGN UP" ---
-                      ElevatedButton(
-                        // --- ¡MODIFICADO! ---
-                        onPressed: state == RegisterState.loading
-                            ? null
-                            : () {
-                          // TODO: Añadir validación (ej. que contraseñas no estén vacías)
-                          // NOTA: Tu API solo pide username/password, no businessName
-                          //      ¡Asegúrate de que esto sea correcto!
-                          context.read<RegisterProvider>().signUp(
-                            _usernameController.text,
-                            _passwordController.text,
+                                // --- Muestra los Botones ---
+                                if (!isLoading)
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (_currentStep > 0)
+                                        TextButton(
+                                          onPressed: details.onStepCancel,
+                                          child: const Text('Atrás'),
+                                        ),
+                                      const SizedBox(width: 12),
+                                      ElevatedButton(
+                                        onPressed: details.onStepContinue,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                          AppColors.primaryButton,
+                                          foregroundColor:
+                                          AppColors.buttonLabel,
+                                        ),
+                                        // Cambia el texto del botón en el último paso
+                                        child: Text(
+                                          _currentStep == 2
+                                              ? 'Ir a Pagar'
+                                              : 'Continuar',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryButton,
-                          foregroundColor: AppColors.buttonLabel,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                        ),
-                        // --- ¡MODIFICADO! Mostramos spinner ---
-                        child: state == RegisterState.loading
-                            ? const CircularProgressIndicator(
-                          valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                            : const Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
                       ),
-                      const SizedBox(height: 16.0),
 
-                      // --- ¡AÑADIDO! Mensaje de Error ---
-                      if (state == RegisterState.error)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            provider.errorMessage,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 16.0),
-
+                      const SizedBox(height: 32.0),
                       // --- ENLACE A "SIGN IN" ---
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text(
                             "Already have an account?",
-                            style: TextStyle(
-                              color: AppColors.textColor,
-                              fontFamily: 'Inter',
-                            ),
+                            style: TextStyle(color: AppColors.textColor),
                           ),
                           TextButton(
-                            onPressed: state == RegisterState.loading ? null : widget.onSignInClicked,
+                            onPressed:
+                            isLoading ? null : widget.onSignInClicked,
                             child: const Text(
-                              'Login', // El diseño dice 'Login'
+                              'Login',
                               style: TextStyle(
-                                color: AppColors.textLink,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
+                                  color: AppColors.textLink,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -247,97 +380,38 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     );
   }
 
-  /// Helper para campos de texto normales
+  /// Helper para campos de texto
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
-    bool isEnabled = true, // Añadido
+    TextInputType keyboardType = TextInputType.text,
+    bool isEnabled = true,
   }) {
     return TextField(
       controller: controller,
-      enabled: isEnabled, // Aplicado
+      enabled: isEnabled,
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
         fillColor: AppColors.textFieldBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
+          borderSide:
+          const BorderSide(color: AppColors.textFieldBorder, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
+          borderSide:
+          const BorderSide(color: AppColors.textFieldBorder, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.primaryButton,
-            width: 2,
-          ),
+          borderSide:
+          const BorderSide(color: AppColors.primaryButton, width: 2),
         ),
-        labelStyle: const TextStyle(
-          color: AppColors.textColor,
-          fontFamily: 'Inter',
-        ),
+        labelStyle: const TextStyle(color: AppColors.textColor),
       ),
-    );
-  }
-
-  /// Helper para campos de contraseña
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String labelText,
-    required bool isObscured,
-    required VoidCallback onToggleVisibility,
-    bool isEnabled = true, // Añadido
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: isObscured,
-      enabled: isEnabled, // Aplicado
-      decoration: InputDecoration(
-        labelText: labelText,
-        filled: true,
-        fillColor: AppColors.textFieldBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.primaryButton,
-            width: 2,
-          ),
-        ),
-        labelStyle: const TextStyle(
-          color: AppColors.textColor,
-          fontFamily: 'Inter',
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            isObscured ? Icons.visibility_off : Icons.visibility,
-            color: AppColors.textColor,
-          ),
-          onPressed: onToggleVisibility,
-        ),
-      ),
+      keyboardType: keyboardType,
     );
   }
 }

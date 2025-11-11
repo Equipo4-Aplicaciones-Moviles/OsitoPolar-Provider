@@ -1,30 +1,44 @@
 import 'dart:convert';
+import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 
-/// Representa el JSON que RECIBIMOS del endpoint:
-/// POST /api/v1/authentication/sign-in
-///
-/// Basado en el schema: AuthenticatedUserResource
 class AuthenticatedUserModel {
   final int id;
   final String username;
   final String token;
+  // --- CAMPOS NUEVOS ---
+  final String userType;
+  final int profileId;
 
   AuthenticatedUserModel({
     required this.id,
     required this.username,
     required this.token,
+    // --- CAMPOS NUEVOS ---
+    required this.userType,
+    required this.profileId,
   });
 
-  /// Convierte un String JSON (la respuesta del API) en nuestro objeto
   factory AuthenticatedUserModel.fromJson(String str) =>
       AuthenticatedUserModel.fromMap(json.decode(str));
 
-  /// Convierte un Map (después de decodificar el JSON) en nuestro objeto
   factory AuthenticatedUserModel.fromMap(Map<String, dynamic> json) =>
       AuthenticatedUserModel(
         id: json['id'],
         username: json['username'],
         token: json['token'],
+        // --- CAMPOS NUEVOS ---
+        userType: json['userType'],
+        profileId: json['profileId'],
       );
-}
 
+  // Helper para convertir el Modelo (Datos) a Entidad (Dominio)
+  AuthenticatedUserEntity toEntity() {
+    return AuthenticatedUserEntity(
+      id: id,
+      username: username,
+      token: token,
+      userType: userType,
+      profileId: profileId,
+    );
+  }
+}

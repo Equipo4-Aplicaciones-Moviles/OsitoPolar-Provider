@@ -9,9 +9,9 @@ import 'package:osito_polar_app/feature/authentication/data/repositories/AuthRep
 import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthRepository.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/SignInUseCase.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
-import 'package:osito_polar_app/feature/authentication/domain/usecases/SignUpUseCase.dart';
+import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateRegistrationCheckoutUseCase.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
-
+import 'package:osito_polar_app/feature/authentication/domain/usecases/CompleteRegistrationUseCase.dart';
 // --- IMPORTACIONES DE EQUIPMENT ---
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSource.dart';
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSourceImpl.dart';
@@ -64,15 +64,21 @@ Future<void> setupLocator() async {
 
   // B. UseCases (Depende de 'AuthRepository')
   sl.registerLazySingleton(() => SignInUseCase(sl()));
-  sl.registerLazySingleton(() => SignUpUseCase(sl()));
+  sl.registerLazySingleton(() => CreateRegistrationCheckoutUseCase(sl()));
+  sl.registerLazySingleton(() => CompleteRegistrationUseCase(sl()));
 
 
   // A. Providers (Depende de 'UseCases' y 'SharedPreferences')
   sl.registerFactory(
         () => ProviderLoginProvider(signInUseCase: sl(), prefs: sl()),
+
   );
   sl.registerFactory(
-        () => RegisterProvider(signUpUseCase: sl()),
+        () => RegisterProvider(
+      createRegistrationCheckoutUseCase: sl(),
+      completeRegistrationUseCase: sl(),
+          prefs: sl(),// <-- ¡NUEVO!
+    ),
   );
 
   // --- Equipment Stack ---

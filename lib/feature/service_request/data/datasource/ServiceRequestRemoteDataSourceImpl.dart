@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'ServiceRequestRemoteDataSource.dart';
 
 // (Reutilizamos la URL base)
-const String kBaseUrl = 'http://localhost:5128';
+const String kBaseUrl = 'http://localhost:8080';
 
 class ServiceRequestRemoteDataSourceImpl implements ServiceRequestRemoteDataSource {
   final http.Client client;

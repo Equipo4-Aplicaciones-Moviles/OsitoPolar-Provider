@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // 1. Reutilizamos la URL base que definimos en el DataSource de Auth
 //    (Asegúrate de que ese archivo la tenga)
 //    O mejor, crea un archivo en 'lib/core/util/constants.dart'
-const String kBaseUrl = 'http://localhost:5128';
+const String kBaseUrl = 'http://localhost:8080';
 
 class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
   final http.Client client;
