@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 // Basado en el schema 'EquipmentResource' de tu API (Swagger)
 class EquipmentModel {
   final int id;
@@ -40,11 +40,31 @@ class EquipmentModel {
 
   });
 
+  factory EquipmentModel.empty() {
+    return EquipmentModel(
+      id: 0,
+      name: '',
+      type: '',
+      model: '',
+      serialNumber: '',
+      status: 'inactive',
+      currentTemperature: 0.0,
+      ownerId: 0,
+      locationName: '',
+      code: '',
+      manufacturer: '',
+      energyConsumptionCurrent: 0.0,
+      technicalDetails: '',
+      notes: '',
+      ownershipType: 'Owned',
+    );
+  }
+
   factory EquipmentModel.fromJson(String str) =>
       EquipmentModel.fromMap(json.decode(str));
 
   factory EquipmentModel.fromMap(Map<String, dynamic> json) => EquipmentModel(
-    id: json['id'],
+    id: json['id']?? 0,
     name: json['name'] ?? 'Nombre no disponible',
     type: json['type'] ?? 'N/A',
     model: json['model'] ?? 'N/A',
@@ -63,6 +83,26 @@ class EquipmentModel {
     notes: json['notes'] ?? 'N/A',
     ownershipType: json['ownershipType'] ?? 'Owned', // <-- Añadido
   );
+
+  EquipmentEntity toEntity() {
+    return EquipmentEntity(
+      id: id,
+      name: name,
+      type: type,
+      model: model,
+      serialNumber: serialNumber,
+      status: status,
+      currentTemperature: currentTemperature,
+      ownerId: ownerId,
+      locationName: locationName,
+      code: code,
+      manufacturer: manufacturer,
+      energyConsumptionCurrent: energyConsumptionCurrent,
+      technicalDetails: technicalDetails,
+      notes: notes,
+      ownershipType: ownershipType,
+    );
+  }
 
   static List<EquipmentModel> listFromMap(List<dynamic> list) =>
       List<EquipmentModel>.from(list.map((x) => EquipmentModel.fromMap(x)));

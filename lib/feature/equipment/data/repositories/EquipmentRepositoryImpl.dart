@@ -218,4 +218,45 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
       ownershipType: model.ownershipType,
     );
   }
+
+  @override
+  Future<Either<Failure, EquipmentEntity>> publishEquipment({
+    required int equipmentId,
+    required double monthlyFee,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final equipmentModel = await remoteDataSource.publishEquipment(
+        equipmentId: equipmentId,
+        monthlyFee: monthlyFee,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      // ¡Usamos el .toEntity() que acabamos de crear!
+      return Right(equipmentModel.toEntity());
+    } on Exception catch(e) {
+      return Left(ServerFailure());
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  // --- ¡AÑADIR ESTE MÉTODO! ---
+  @override
+  Future<Either<Failure, EquipmentEntity>> unpublishEquipment({
+    required int equipmentId,
+  }) async {
+    try {
+      final equipmentModel = await remoteDataSource.unpublishEquipment(
+        equipmentId: equipmentId,
+      );
+      // ¡Usamos el .toEntity()!
+      return Right(equipmentModel.toEntity());
+    } on Exception catch(e) {
+      return Left(ServerFailure());
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
 }

@@ -106,11 +106,12 @@ class AddEquipmentProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-
-    final failureOrSuccess = await updateEquipmentUseCase(
-      _editingEquipment!.id, // Pasa el ID del equipo que estamos editando
-      equipmentData,
+    final params = UpdateEquipmentParams(
+      id: _editingEquipment!.id,
+      data: equipmentData,
     );
+
+    final failureOrSuccess = await updateEquipmentUseCase(params);
 
     failureOrSuccess.fold(
           (failure) {

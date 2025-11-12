@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // <-- Importa Provider
 import 'package:osito_polar_app/core/theme/app_colors.dart';
+// (Importa tu provider de login para poder cerrar sesión)
+import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 
 /// El menú lateral (Drawer) para todas las pantallas del Proveedor.
 class ProviderDrawer extends StatelessWidget {
@@ -12,7 +15,7 @@ class ProviderDrawer extends StatelessWidget {
         // Elimina cualquier padding del ListView
         padding: EdgeInsets.zero,
         children: <Widget>[
-          // 1. Cabecera del Drawer
+          // 1. Cabecera del Drawer (Tu código - sin cambios)
           DrawerHeader(
             decoration: const BoxDecoration(
               color: AppColors.primaryButton, // Fondo azul
@@ -27,20 +30,30 @@ class ProviderDrawer extends StatelessWidget {
               ),
             ),
           ),
+
           // 2. Opciones de Navegación
           _buildDrawerItem(
             context,
             icon: Icons.home,
-            text: 'Inicio',
+            text: 'Inicio (Resumen)', // <-- Texto clarificado
             routeName: '/provider_home',
           ),
           _buildDrawerItem(
             context,
             icon: Icons.kitchen,
             text: 'Mis Equipos',
-            // ¡Ruta corregida! Apunta a la página que ya construimos
             routeName: '/provider_my_equipments',
           ),
+
+          // --- ¡NUEVO ENLACE AÑADIDO! ---
+          _buildDrawerItem(
+            context,
+            icon: Icons.storefront, // Icono de tienda/marketplace
+            text: 'Marketplace de Servicios',
+            routeName: '/provider_marketplace',
+          ),
+          // ---------------------------------
+
           _buildDrawerItem(
             context,
             icon: Icons.people,
@@ -54,19 +67,39 @@ class ProviderDrawer extends StatelessWidget {
             routeName: '/provider_client_account',
           ),
           const Divider(),
-          _buildDrawerItem(
-            context,
-            icon: Icons.logout,
-            text: 'Cerrar Sesión',
-            routeName: '/select_profile', // Vuelve al inicio
-            // TODO: Añadir lógica real de logout (limpiar token de SharedPreferences)
+
+          // --- ¡LÓGICA DE LOGOUT MEJORADA! ---
+          // (Usamos un ListTile normal porque no es una ruta "seleccionable")
+          ListTile(
+            leading: const Icon(Icons.logout, color: AppColors.textColor),
+            title: const Text(
+              'Cerrar Sesión',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: AppColors.textColor,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+            onTap: () {
+              // Cierra el drawer
+              Navigator.pop(context);
+
+              // ¡Limpia el token guardado!
+              // (Asume que tienes un método logout() en tu LoginProvider
+              // que borra el token de SharedPreferences)
+              context.read<ProviderLoginProvider>().logout();
+
+              // Navega a la pantalla de selección y borra todas las anteriores
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/select_profile', (route) => false);
+            },
           ),
         ],
       ),
     );
   }
 
-  /// Helper para construir cada item del menú
+  /// Helper para construir cada item del menú (Tu código - sin cambios)
   Widget _buildDrawerItem(
       BuildContext context, {
         required IconData icon,
@@ -78,7 +111,8 @@ class ProviderDrawer extends StatelessWidget {
     final bool isSelected = (currentRoute == routeName);
 
     return ListTile(
-      leading: Icon(icon, color: isSelected ? AppColors.primaryButton : AppColors.textColor),
+      leading: Icon(icon,
+          color: isSelected ? AppColors.primaryButton : AppColors.textColor),
       title: Text(
         text,
         style: TextStyle(

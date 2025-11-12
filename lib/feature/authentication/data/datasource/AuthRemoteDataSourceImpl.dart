@@ -1,88 +1,113 @@
 import 'package:http/http.dart' as http;
-// Usamos tus nombres de archivo 'PascalCase'
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// (Imports de tus modelos)
 import 'package:osito_polar_app/feature/authentication/data/models/SignInRequestModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/models/AuthenticatedUserModel.dart';
+import 'package:osito_polar_app/feature/authentication/data/models/RegistrationCheckoutModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/datasource/AuthRemoteDataSource.dart';
-
-import 'package:osito_polar_app/feature/authentication/data/models/SignUpRequestModel.dart';
-import 'package:osito_polar_app/feature/authentication/data/datasource/AuthRemoteDataSource.dart';
-// --- ¡SOLUCIÓN AQUÍ! ---
-// Como estás compilando para Windows, 'localhost' SÍ funciona.
-// Añadimos 'http://'
-const String kBaseUrl = 'http://localhost:5128';
-
-// NOTA: Si alguna vez pruebas en un Emulador de Android,
-// deberás cambiar esta línea a:
-// const String kBaseUrl = 'http://10.0.2.2:5128';
-// ---
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final http.Client client;
+  final String baseUrl;
 
-  AuthRemoteDataSourceImpl({required this.client});
+  AuthRemoteDataSourceImpl({required this.client})
+      : baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:8080';
 
   @override
   Future<AuthenticatedUserModel> signIn(SignInRequestModel request) async {
-    // Usamos el kBaseUrl con tu endpoint de la API
-    final uri = Uri.parse('$kBaseUrl/api/v1/authentication/sign-in');
-
-    print('Llamando a la API: $uri'); // <-- Bueno para debugging
-
-    try {
-      final response = await client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: request.toJson(), // Usamos el modelo que creamos
-      );
-
-      print('Respuesta de la API: ${response.statusCode}'); // <-- Bueno para debugging
-
-      if (response.statusCode == 200) {
-        // Si el login es exitoso, convertimos la respuesta JSON
-        // en nuestro modelo AuthenticatedUserModel
-        return AuthenticatedUserModel.fromJson(response.body);
-      } else {
-        // TODO: Manejar errores (401, 404, 500)
-        print('Error de API: ${response.body}');
-        throw Exception('Error al iniciar sesión: ${response.statusCode}');
-      }
-    } catch (e) {
-      // Captura errores de red (ej. si el servidor no está corriendo)
-      print('Error de red: $e');
-      throw Exception('No se pudo conectar al servidor.');
-    }
-  }
-
-  @override
-  Future<void> signUp(SignUpRequestModel request) async {
-    final uri = Uri.parse('$kBaseUrl/api/v1/authentication/sign-up');
-
+    // ... (Tu código de signIn - sin cambios)
+    final uri = Uri.parse('$baseUrl/api/v1/authentication/sign-in');
     print('Llamando a la API: $uri');
-
     try {
       final response = await client.post(
         uri,
         headers: { 'Content-Type': 'application/json' },
         body: request.toJson(),
       );
-
-      print('Respuesta de la API: ${response.statusCode}');
-
-      // Tu API (Swagger) devuelve 200 para un registro exitoso
       if (response.statusCode == 200) {
-        // No hay nada que devolver, fue exitoso
-        return;
+        return AuthenticatedUserModel.fromJson(response.body);
       } else {
-        // Error (ej. 400 Bad Request si el usuario ya existe)
-        print('Error de API: ${response.body}');
-        throw Exception('Error al registrar usuario: ${response.statusCode}');
+        throw Exception('Error al iniciar sesión: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error de red: $e');
       throw Exception('No se pudo conectar al servidor.');
     }
   }
 
+  @override
+  Future<RegistrationCheckoutModel> createRegistrationCheckout({
+    required int planId,
+    required String userType,
+    required String successUrl,
+    required String cancelUrl,
+  }) async {
+    // ¡La URL corregida que encontramos!
+    final uri = Uri.parse('$baseUrl/api/v1/authentication/create-registration-checkout');
+    print('Llamando a la API (Paso 1): $uri');
+
+    try {
+      final response = await client.post(
+        uri,
+        headers: { 'Content-Type': 'application/json' },
+        // --- ¡MODIFICADO! ---
+        // Enviamos solo los 4 campos que la API espera
+        body: jsonEncode({
+          "planId": planId,
+          "userType": userType,
+          "successUrl": successUrl,
+          "cancelUrl": cancelUrl,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return RegistrationCheckoutModel.fromJson(response.body);
+      } else {
+        print('Error API (Paso 1): ${response.body}');
+        throw Exception('Error al crear checkout: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error de red (Paso 1): $e');
+      throw Exception('No se pudo conectar al servidor.');
+    }
+  }
+
+  // --- ¡NUEVO MÉTODO! ---
+  @override
+  Future<void> completeRegistration({
+    required String sessionId,
+    required Map<String, dynamic> registrationData,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/v1/authentication/complete-registration');
+    print('Llamando a la API (Paso 2): $uri');
+
+    // Prepara el body: El Map ya contiene todos los datos del formulario,
+    // solo nos aseguramos de que también tenga el sessionId.
+    final body = {
+      ...registrationData, // (username, email, companyName, etc.)
+      'sessionId': sessionId,
+    };
+
+    try {
+      final response = await client.post(
+        uri,
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonEncode(body),
+      );
+
+      // La API devuelve 200 OK si el registro es exitoso
+      if (response.statusCode == 200) {
+        print("Respuesta de Registro (Paso 2): ${response.body}");
+        print("¡Registro completado exitosamente!");
+        return; // Éxito (void)
+      } else {
+        print('Error API (Paso 2): ${response.body}');
+        throw Exception('Error al completar el registro: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error de red (Paso 2): $e');
+      throw Exception('No se pudo conectar al servidor.');
+    }
+  }
 }
