@@ -69,6 +69,50 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         fontFamily: 'Inter',
         useMaterial3: true,
+
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primaryButton, // <-- ¡Tu color azul!
+          primary: AppColors.primaryButton,
+          background: AppColors.backgroundLight,
+        ),
+
+        // 2. Define el estilo de los botones (para que usen tu color)
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryButton,
+            foregroundColor: AppColors.buttonLabel,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          ),
+        ),
+
+        // 3. Define el estilo de los campos de texto
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.textFieldBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            borderSide: BorderSide(color: AppColors.textFieldBorder, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            borderSide: BorderSide(color: AppColors.textFieldBorder, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            borderSide: BorderSide(color: AppColors.primaryButton, width: 2),
+          ),
+          labelStyle: TextStyle(color: AppColors.textColor),
+        ),
+
+        // 4. (Opcional) Define el estilo de los TextButton (como el "Cancelar" del diálogo)
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primaryButton, // <-- Tu color azul
+          ),
+        ),
       ),
       initialRoute: '/select_profile',
       onGenerateRoute: (settings) {
