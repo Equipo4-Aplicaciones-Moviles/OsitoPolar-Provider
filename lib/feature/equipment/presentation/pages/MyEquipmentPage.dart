@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
+// --- ¡MODIFICADO! ---
+// Borramos ProviderHomeProvider e importamos el provider correcto
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart';
-import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
+// (Ya no necesitamos ServiceRequestEntity aquí)
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -20,13 +22,16 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProviderHomeProvider>().loadDashboardData();
+      // --- ¡MODIFICADO! ---
+      // Llama al método correcto del provider correcto
+      context.read<EquipmentProvider>().loadEquipments();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ProviderHomeProvider>();
+    // --- ¡MODIFICADO! ---
+    final provider = context.watch<EquipmentProvider>();
     final state = provider.state;
 
     return Scaffold(
@@ -42,7 +47,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           );
         }),
         title: const Text(
-          'OsitoPolar',
+          'Mis Equipos', // <-- ¡Título actualizado!
           style: TextStyle(
             color: AppColors.logoColor,
             fontWeight: FontWeight.bold,
@@ -60,7 +65,8 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             : () async {
           await Navigator.pushNamed(context, '/provider_add_equipment');
           if (mounted) {
-            context.read<ProviderHomeProvider>().loadDashboardData();
+            // --- ¡MODIFICADO! ---
+            context.read<EquipmentProvider>().loadEquipments();
           }
         },
         backgroundColor: AppColors.primaryButton,
@@ -71,13 +77,14 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
+  // --- ¡MODIFICADO! ---
   Widget _buildBody(
-      BuildContext context, ProviderHomeProvider provider, ProviderHomeState state) {
+      BuildContext context, EquipmentProvider provider, EquipmentState state) {
     switch (state) {
-      case ProviderHomeState.initial:
-      case ProviderHomeState.loading:
+      case EquipmentState.initial:
+      case EquipmentState.loading:
         return const Center(child: CircularProgressIndicator());
-      case ProviderHomeState.error:
+      case EquipmentState.error:
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -88,27 +95,27 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             ),
           ),
         );
-      case ProviderHomeState.success:
+      case EquipmentState.success:
         return _buildDashboardContent(context, provider);
     }
   }
 
+  // --- ¡MODIFICADO! ---
   Widget _buildDashboardContent(
-      BuildContext context, ProviderHomeProvider provider) {
+      BuildContext context, EquipmentProvider provider) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Mis equipos'),
+            _buildSectionTitle('Mi Inventario'), // <-- Título actualizado
             const SizedBox(height: 8),
             _buildEquipmentList(context, provider),
-            const SizedBox(height: 24),
-            _buildSectionTitle('Marketplace de Servicios'),
-            const SizedBox(height: 8),
-            _buildMaintenanceList(context, provider.serviceRequests),
-            const SizedBox(height: 80),
+            const SizedBox(height: 80), // Espacio para el FAB
+
+            // --- ¡BORRADO! ---
+            // La sección 'Marketplace de Servicios' ya no va aquí.
           ],
         ),
       ),
@@ -116,6 +123,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
   }
 
   Widget _buildSectionTitle(String title) => Padding(
+    // ... (Tu código de _buildSectionTitle está perfecto)
     padding: const EdgeInsets.symmetric(horizontal: 8.0),
     child: Text(
       title,
@@ -128,8 +136,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     ),
   );
 
+  // --- ¡MODIFICADO! ---
   Widget _buildEquipmentList(
-      BuildContext context, ProviderHomeProvider provider) {
+      BuildContext context, EquipmentProvider provider) {
+    // ... (Tu código de _buildEquipmentList está perfecto)
     final equipments = provider.equipments;
     if (equipments.isEmpty) {
       return Card(
@@ -168,8 +178,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
+  // --- ¡MODIFICADO! ---
   Widget _buildEquipmentCard(
-      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
+    // ... (Tu código de _buildEquipmentCard está perfecto)
     final statusColor =
     (eq.status.toLowerCase() == 'active' || eq.status.toLowerCase() == 'normal')
         ? Colors.green
@@ -305,9 +317,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- Diálogo: Delete ---
+  // --- ¡MODIFICADO! ---
+  // (El provider ahora es 'EquipmentProvider')
   void _showDeleteDialog(
-      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -322,7 +335,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
               final success = await provider.deleteEquipment(eq.id);
-              if (success && mounted) await provider.loadDashboardData();
+              if (success && mounted) {
+                await provider.loadEquipments(); // <-- ¡Llama al método correcto!
+              }
               setState(() => _isProcessing = false);
               if (!mounted) return;
               ScaffoldMessenger.of(context)
@@ -340,12 +355,11 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- Diálogo: Publish ---
+  // --- ¡MODIFICADO! ---
+  // (El provider ahora es 'EquipmentProvider')
   void _showPublishDialog(
-      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
     final priceController = TextEditingController(text: '100.00');
-
-    // 🔹 Guardamos el context raíz (Scaffold) para usarlo luego
     final rootContext = context;
 
     showDialog(
@@ -371,12 +385,13 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               setState(() => _isProcessing = true);
 
               final success = await provider.publishEquipment(eq.id, price);
-              if (success && mounted) await provider.loadDashboardData();
+              if (success && mounted) {
+                await provider.loadEquipments(); // <-- ¡Llama al método correcto!
+              }
 
               if (!mounted) return;
               setState(() => _isProcessing = false);
 
-              // 🔹 Usa rootContext (el del Scaffold), no el del diálogo
               if (rootContext.mounted) {
                 ScaffoldMessenger.of(rootContext)
                   ..hideCurrentSnackBar()
@@ -395,9 +410,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- Diálogo: Unpublish ---
+  // --- ¡MODIFICADO! ---
+  // (El provider ahora es 'EquipmentProvider')
   void _showUnpublishDialog(
-      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
     final rootContext = context;
     showDialog(
       context: context,
@@ -414,9 +430,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               setState(() => _isProcessing = true);
               final success = await provider.unpublishEquipment(eq.id);
 
-              if (success ||
-                  provider.errorMessage.contains('not published for rent')) {
-                if (mounted) await provider.loadDashboardData();
+              // (Tu lógica de 'contains' está bien)
+              if (success || provider.errorMessage.contains('not published for rent')) {
+                if (mounted) await provider.loadEquipments(); // <-- ¡Llama al método correcto!
               }
 
               setState(() => _isProcessing = false);
@@ -426,15 +442,11 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   ..hideCurrentSnackBar()
                   ..showSnackBar(SnackBar(
                     content: Text(
-                      (success ||
-                          provider.errorMessage
-                              .contains('not published for rent'))
+                      (success || provider.errorMessage.contains('not published for rent'))
                           ? '¡"${eq.name}" ocultado!'
                           : 'Error: ${provider.errorMessage}',
                     ),
-                    backgroundColor: (success ||
-                        provider.errorMessage
-                            .contains('not published for rent'))
+                    backgroundColor: (success || provider.errorMessage.contains('not published for rent'))
                         ? Colors.green
                         : Colors.red,
                   ));
@@ -446,74 +458,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- Marketplace (mantenimientos) ---
-  Widget _buildMaintenanceList(
-      BuildContext context, List<ServiceRequestEntity> requests) {
-    if (requests.isEmpty) {
-      return Card(
-        elevation: 0,
-        color: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
-          side: const BorderSide(color: AppColors.cardBorder, width: 1),
-        ),
-        child: const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Center(
-            child: Text(
-              'No se encontraron mantenimientos en el marketplace.',
-              style: TextStyle(fontFamily: 'Inter', color: AppColors.textColor),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 280,
-      child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9),
-        itemCount: requests.length,
-        itemBuilder: (context, index) {
-          final r = requests[index];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Card(
-              color: AppColors.cardBackground,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-                side: const BorderSide(color: AppColors.cardBorder, width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    const Icon(Icons.event_note, size: 60),
-                    const SizedBox(height: 16),
-                    Text(r.title,
-                        style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
-                    Text('Cliente ID: ${r.clientId ?? 'N/A'}',
-                        style:
-                        const TextStyle(fontFamily: 'Inter', fontSize: 14)),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white),
-                      child: const Text('Aceptar'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+// --- ¡BORRADO! ---
+// (Los métodos _buildMaintenanceList, _buildMaintenanceCard, y _showAcceptDialog
+//  ya no están en esta página).
 }

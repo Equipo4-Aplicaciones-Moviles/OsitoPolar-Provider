@@ -86,4 +86,24 @@ class ProviderLoginProvider extends ChangeNotifier {
         return 'Un error inesperado ocurrió.';
     }
   }
+
+  Future<void> logout() async {
+    // Borra todos los datos de sesión que guardamos
+    await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('username');
+    await prefs.remove('user_type');
+    await prefs.remove('profile_id');
+
+    // Limpia el estado interno del provider
+    _user = null;
+    _state = LoginState.initial;
+    _errorMessage = '';
+
+    print("Logout exitoso. Token borrado.");
+
+    // Notifica a los listeners (aunque no es estrictamente necesario
+    // si vamos a navegar inmediatamente)
+    notifyListeners();
+  }
 }

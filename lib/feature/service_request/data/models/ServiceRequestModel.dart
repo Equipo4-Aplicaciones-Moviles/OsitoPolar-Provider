@@ -1,62 +1,39 @@
 import 'dart:convert';
+import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
 
-// Basado en el schema 'ServiceRequestResource' de tu API (Swagger)
-class ServiceRequestModel {
-  final int id;
-  final String orderNumber;
-  final String title;
-  final String description;
-  final String issueDetails;
-  final int? clientId;
-  final int? companyId;
-  final int equipmentId;
-  final String requestTime;
-  final String status;
-  final String priority;
-  final String serviceType;
-  final bool isEmergency;
+// Este modelo hereda de la Entidad
+class ServiceRequestModel extends ServiceRequestEntity {
 
-  ServiceRequestModel({
-    required this.id,
-    required this.orderNumber,
-    required this.title,
-    required this.description,
-    required this.issueDetails,
-    this.clientId,
-    this.companyId,
-    required this.equipmentId,
-    required this.requestTime,
-    required this.status,
-    required this.priority,
-    required this.serviceType,
-    required this.isEmergency,
+  const ServiceRequestModel({
+    required super.id,
+    required super.title,
+    required super.status,
+    super.clientId,
   });
 
   factory ServiceRequestModel.fromJson(String str) =>
       ServiceRequestModel.fromMap(json.decode(str));
 
-  factory ServiceRequestModel.fromMap(Map<String, dynamic> json) =>
-      ServiceRequestModel(
-        // Asegúrate de que los nombres 'json['...']' coincidan con tu API
-        id: json['id'],
-        orderNumber: json['orderNumber'] ?? 'N/A',
-        title: json['title'] ?? 'Sin Título',
-        description: json['description'] ?? '',
-        issueDetails: json['issueDetails'] ?? '',
-        clientId: json['clientId'],
-        companyId: json['companyId'],
-        equipmentId: json['equipmentId'],
-        requestTime: json['requestTime'] ?? '',
-        status: json['status'] ?? 'Desconocido',
-        priority: json['priority'] ?? 'Normal',
-        serviceType: json['serviceType'] ?? 'N/A',
-        isEmergency: json['isEmergency'] ?? false,
-      );
+  // --- ¡¡AQUÍ ESTÁ EL ARREGLO!! ---
+  // Este factory ahora SÍ coincide con el JSON de tu log
+  factory ServiceRequestModel.fromMap(Map<String, dynamic> json) {
+    return ServiceRequestModel(
+      // Campos que tu UI SÍ necesita:
+      id: json['id'],
+      title: json['title'] ?? 'Sin Título', // 'title' es un String
+      status: json['status'] ?? 'Desconocido', // 'status' es un String
+      clientId: json['clientId'], // 'clientId' es un int (Ej: 3)
 
-  static List<ServiceRequestModel> listFromMap(List<dynamic> list) =>
-      List<ServiceRequestModel>.from(
-          list.map((x) => ServiceRequestModel.fromMap(x)));
+      // ¡Importante!
+      // Ignoramos el campo "equipment" (el Map) que estaba
+      // causando el crash. Ya no intentamos leerlo.
+      // También ignoramos 'equipmentId', 'description', etc.,
+      // porque tu UI no los está usando por ahora.
+    );
+  }
 
+  // Método estático para parsear la lista completa
   static List<ServiceRequestModel> listFromJson(String str) =>
-      listFromMap(json.decode(str));
+      List<ServiceRequestModel>.from(json.decode(str).map((x) => ServiceRequestModel.fromMap(x)));
+
 }

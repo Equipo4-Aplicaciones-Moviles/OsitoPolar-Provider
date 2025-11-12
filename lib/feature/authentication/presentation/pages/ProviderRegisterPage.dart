@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart'; // (Asegúrate de tener 'url_launcher' en pubspec.yaml)
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/core/ui/widgets/OsitoPolarTopBar.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
-// Importamos los "Params" de los UseCases para saber qué datos necesitamos
 import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateRegistrationCheckoutUseCase.dart';
 
 /// Pantalla de Registro para Providers, ahora como un "wizard" de 3 pasos.
@@ -22,30 +21,23 @@ class ProviderRegisterPage extends StatefulWidget {
 }
 
 class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
-  // --- Controladores para el Stepper ---
+  // --- (Tus controladores no cambian) ---
   int _currentStep = 0;
-
-  // --- Controladores para TODOS los campos de la API ---
-
-  // Paso 1: Cuenta
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
-
-  // Paso 2: Empresa
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _companyNameController = TextEditingController();
-  final _taxIdController = TextEditingController(); // RUC/Identificador Fiscal
-
-  // Paso 3: Dirección
+  final _taxIdController = TextEditingController();
   final _streetController = TextEditingController();
   final _numberController = TextEditingController();
   final _cityController = TextEditingController();
   final _postalCodeController = TextEditingController();
-  final _countryController = TextEditingController(text: 'Peru'); // Valor por defecto
+  final _countryController = TextEditingController(text: 'Peru');
 
   @override
   void dispose() {
+    // --- (Tu 'dispose' no cambia) ---
     _usernameController.dispose();
     _emailController.dispose();
     _firstNameController.dispose();
@@ -60,7 +52,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     super.dispose();
   }
 
-  // --- Método para construir los 3 pasos del wizard ---
+  // --- (Tu lógica de '_buildSteps' y '_submitRegistration' no cambia) ---
   List<Step> _buildSteps(BuildContext context, RegisterState state) {
     bool isLoading = (state == RegisterState.creatingCheckout ||
         state == RegisterState.completingRegistration);
@@ -68,7 +60,11 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     return [
       // --- PASO 1: DATOS DE CUENTA ---
       Step(
-        title: const Text('Cuenta'),
+        // --- ¡COLOR APLICADO! ---
+        title: const Text(
+          'Cuenta',
+          style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           children: [
             _buildTextField(
@@ -90,7 +86,11 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       ),
       // --- PASO 2: DATOS DE EMPRESA ---
       Step(
-        title: const Text('Empresa'),
+        // --- ¡COLOR APLICADO! ---
+        title: const Text(
+          'Empresa',
+          style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           children: [
             _buildTextField(
@@ -123,7 +123,11 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       ),
       // --- PASO 3: DIRECCIÓN DE FACTURACIÓN ---
       Step(
-        title: const Text('Dirección'),
+        // --- ¡COLOR APLICADO! ---
+        title: const Text(
+          'Dirección',
+          style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           children: [
             _buildTextField(
@@ -163,12 +167,11 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     ];
   }
 
-  // --- Método que se llama al presionar "Continuar" en el último paso ---
   void _submitRegistration() {
+    // ... (Tu lógica no cambia)
     final provider = context.read<RegisterProvider>();
     if (provider.state == RegisterState.creatingCheckout) return;
 
-    // 1. Guardamos TODOS los datos del formulario en un Map
     final formData = {
       "username": _usernameController.text,
       "email": _emailController.text,
@@ -183,28 +186,23 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       "country": _countryController.text,
     };
 
-    // 2. Creamos los 'Params' para la PRIMERA llamada
     final checkoutParams = CheckoutParams(
-      planId: 4, // (Ejemplo, debes obtener esto de una selección de plan)
+      planId: 4,
       userType: "Provider",
-      // ¡IMPORTANTE! Añade '/#' para el ruteo de Flutter Web
       successUrl: "http://localhost:3000/#/registration/success",
       cancelUrl: "http://localhost:3000/#/registration/cancel",
     );
 
-    // 3. Llamamos al provider
     print("Iniciando Paso 1: Creando checkout...");
     provider.createCheckout(formData, checkoutParams);
   }
 
-  // --- Método para lanzar la URL de Stripe ---
   Future<void> _launchStripeCheckout(String url) async {
+    // ... (Tu lógica no cambia)
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
-      // 'webOnlyWindowName: _self' intenta abrirlo en la misma pestaña
       await launchUrl(uri, webOnlyWindowName: '_self');
     } else {
-      // Si falla, muestra un error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo abrir la página de pago: $url')),
       );
@@ -218,24 +216,19 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     final isLoading = (state == RegisterState.creatingCheckout ||
         state == RegisterState.completingRegistration);
 
-    // --- LISTENER DE ESTADO ---
-    // Escucha cambios en el provider para actuar (como lanzar la URL)
+    // ... (Tu 'WidgetsBinding' no cambia)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // ¡Reaccionamos solo a 'checkoutCreated'!
       if (state == RegisterState.checkoutCreated) {
         final url = provider.checkoutEntity?.checkoutUrl;
         if (url != null) {
           print("¡Paso 1 Exitoso! Redirigiendo a Stripe: $url");
-          // ¡Lanza la URL de Stripe!
           _launchStripeCheckout(url);
-          // ¡NO reseteamos el estado! Necesitamos los datos guardados
-          // para el Paso 2.
         }
       }
     });
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.backgroundLight, // OK
       appBar: OsitoPolarTopBar(
         onMenuClicked: () {
           // TODO: Implementar lógica del drawer
@@ -248,10 +241,10 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
               padding: const EdgeInsets.all(24.0),
               child: Card(
                 elevation: 0,
-                color: AppColors.cardBackground,
+                color: AppColors.cardBackground, // OK
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.0),
-                  side: const BorderSide(color: AppColors.cardBorder, width: 1),
+                  side: const BorderSide(color: AppColors.cardBorder, width: 1), // OK
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -264,7 +257,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                         'Crear Cuenta de Proveedor',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.title,
+                          color: AppColors.title, // OK
                           fontWeight: FontWeight.bold,
                           fontSize: 28,
                           fontFamily: 'Inter',
@@ -273,79 +266,97 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                       const SizedBox(height: 32.0),
 
                       // --- WIZARD (STEPPER) ---
-                      Stepper(
-                        currentStep: _currentStep,
-                        onStepTapped: (step) {
-                          if (!isLoading) setState(() => _currentStep = step);
-                        },
-                        onStepContinue: () {
-                          if (_currentStep == 2) {
-                            // Si es el último paso, llama a la API
-                            _submitRegistration();
-                          } else if (!isLoading) {
-                            // Si no, avanza al siguiente paso
-                            setState(() => _currentStep += 1);
-                          }
-                        },
-                        onStepCancel: () {
-                          if (_currentStep > 0 && !isLoading) {
-                            setState(() => _currentStep -= 1);
-                          }
-                        },
-                        steps: _buildSteps(context, state),
-                        controlsBuilder: (context, details) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 16.0),
-                            child: Column(
-                              children: [
-                                // --- Muestra el Error ---
-                                if (state == RegisterState.error)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 16.0),
-                                    child: Text(
-                                      provider.errorMessage,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-
-                                // --- Muestra el Loading ---
-                                if (isLoading)
-                                  const Center(
-                                      child: CircularProgressIndicator()),
-
-                                // --- Muestra los Botones ---
-                                if (!isLoading)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      if (_currentStep > 0)
-                                        TextButton(
-                                          onPressed: details.onStepCancel,
-                                          child: const Text('Atrás'),
-                                        ),
-                                      const SizedBox(width: 12),
-                                      ElevatedButton(
-                                        onPressed: details.onStepContinue,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                          AppColors.primaryButton,
-                                          foregroundColor:
-                                          AppColors.buttonLabel,
-                                        ),
-                                        // Cambia el texto del botón en el último paso
-                                        child: Text(
-                                          _currentStep == 2
-                                              ? 'Ir a Pagar'
-                                              : 'Continuar',
-                                        ),
+                      // --- ¡COLOR APLICADO! ---
+                      // Envolvemos el Stepper en un Theme para que use
+                      // AppColors.primaryButton como su color principal.
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: Theme.of(context).colorScheme.copyWith(
+                            primary: AppColors.primaryButton,
+                          ),
+                        ),
+                        child: Stepper(
+                          currentStep: _currentStep,
+                          onStepTapped: (step) {
+                            if (!isLoading) setState(() => _currentStep = step);
+                          },
+                          onStepContinue: () {
+                            if (_currentStep == 2) {
+                              _submitRegistration();
+                            } else if (!isLoading) {
+                              setState(() => _currentStep += 1);
+                            }
+                          },
+                          onStepCancel: () {
+                            if (_currentStep > 0 && !isLoading) {
+                              setState(() => _currentStep -= 1);
+                            }
+                          },
+                          steps: _buildSteps(context, state),
+                          controlsBuilder: (context, details) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: Column(
+                                children: [
+                                  // --- Muestra el Error ---
+                                  if (state == RegisterState.error)
+                                    Padding(
+                                      padding:
+                                      const EdgeInsets.only(bottom: 16.0),
+                                      child: Text(
+                                        provider.errorMessage,
+                                        textAlign: TextAlign.center,
+                                        // --- ¡COLOR APLICADO! ---
+                                        style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
                                       ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
+                                    ),
+
+                                  // --- Muestra el Loading ---
+                                  if (isLoading)
+                                  // --- ¡COLOR APLICADO! ---
+                                    const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                              AppColors.primaryButton),
+                                        )),
+
+                                  // --- Muestra los Botones ---
+                                  if (!isLoading)
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        if (_currentStep > 0)
+                                          TextButton(
+                                            onPressed: details.onStepCancel,
+                                            // --- ¡COLOR APLICADO! ---
+                                            child: const Text(
+                                              'Atrás',
+                                              style: TextStyle(
+                                                  color: AppColors.textLink),
+                                            ),
+                                          ),
+                                        const SizedBox(width: 12),
+                                        ElevatedButton(
+                                          onPressed: details.onStepContinue,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                            AppColors.primaryButton, // OK
+                                            foregroundColor:
+                                            AppColors.buttonLabel, // OK
+                                          ),
+                                          child: Text(
+                                            _currentStep == 2
+                                                ? 'Ir a Pagar'
+                                                : 'Continuar',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
 
                       const SizedBox(height: 32.0),
@@ -355,7 +366,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                         children: [
                           const Text(
                             "Already have an account?",
-                            style: TextStyle(color: AppColors.textColor),
+                            style: TextStyle(color: AppColors.textColor), // OK
                           ),
                           TextButton(
                             onPressed:
@@ -363,7 +374,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                             child: const Text(
                               'Login',
                               style: TextStyle(
-                                  color: AppColors.textLink,
+                                  color: AppColors.textLink, // OK
                                   fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -393,23 +404,23 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
-        fillColor: AppColors.textFieldBackground,
+        fillColor: AppColors.textFieldBackground, // OK
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide:
-          const BorderSide(color: AppColors.textFieldBorder, width: 1),
+          const BorderSide(color: AppColors.textFieldBorder, width: 1), // OK
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide:
-          const BorderSide(color: AppColors.textFieldBorder, width: 1),
+          const BorderSide(color: AppColors.textFieldBorder, width: 1), // OK
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide:
-          const BorderSide(color: AppColors.primaryButton, width: 2),
+          const BorderSide(color: AppColors.primaryButton, width: 2), // OK
         ),
-        labelStyle: const TextStyle(color: AppColors.textColor),
+        labelStyle: const TextStyle(color: AppColors.textColor), // OK
       ),
       keyboardType: keyboardType,
     );

@@ -7,5 +7,8 @@ abstract class ServiceRequestRemoteDataSource {
   /// Arroja una [Exception] si falla la llamada.
   Future<List<ServiceRequestModel>> getServiceRequests();
   Future<List<ServiceRequestModel>> getAvailableServiceRequests();
+  Future<void> acceptServiceRequest({
+    required int serviceRequestId,
+  });
 // TODO: Añadir métodos para getServiceRequestById, createServiceRequest, etc.
 }
