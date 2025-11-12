@@ -104,7 +104,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         _ownerTypeController.text.isEmpty ||
         _locationNameController.text.isEmpty ||
         _manufacturerController.text.isEmpty ||
-        _selectedOwnership == null ||
         _selectedType == null ||
         _locationAddressController.text.isEmpty ||
         _technicalDetailsController.text.isEmpty ||
@@ -131,7 +130,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
       'ownerType': _ownerTypeController.text,
       'locationName': _locationNameController.text,
       'manufacturer': _manufacturerController.text,
-      'ownershipType': _selectedOwnership!,
+      'ownershipType': 'Owned',
       'locationAddress': _locationAddressController.text,
       'technicalDetails': _technicalDetailsController.text,
       'energyConsumptionUnit': _energyConsumptionUnitController.text,
@@ -347,18 +346,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   const SizedBox(height: 16.0),
 
                   // --- ¡CAMPO "POSESIÓN" MODIFICADO! ---
-                  _buildDropdownField(
-                    value: _selectedOwnership,
-                    labelText: 'Tipo de Posesión (*)',
-                    items: _ownershipTypes,
-                    onChanged: (state == AddEquipmentState.loading)
-                        ? null
-                        : (newValue) {
-                      setState(() {
-                        _selectedOwnership = newValue;
-                      });
-                    },
-                  ),
+
                   const SizedBox(height: 16.0),
                   _buildTextField(
                     controller: _costController,

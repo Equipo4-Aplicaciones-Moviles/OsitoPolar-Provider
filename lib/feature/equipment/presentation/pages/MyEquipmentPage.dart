@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-// (Tus importaciones existentes)
+import 'package:provider/provider.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
-import 'package:provider/provider.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart'; // (Usando tu 'PascalCase')
+import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart';
 import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
-import 'package:provider/provider.dart';
-import 'package:osito_polar_app/core/theme/app_colors.dart';
-import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart'; // (Usando tu 'PascalCase')
+
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
 
@@ -17,42 +14,33 @@ class MyEquipmentPage extends StatefulWidget {
 }
 
 class _MyEquipmentPageState extends State<MyEquipmentPage> {
+  bool _isProcessing = false; // 🔒 bloquea botones durante peticiones
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // (Usando tu clase 'ProviderHomeProvider')
       context.read<ProviderHomeProvider>().loadDashboardData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // (Usando tu clase 'ProviderHomeProvider')
     final provider = context.watch<ProviderHomeProvider>();
     final state = provider.state;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        // ... (Tu AppBar existente) ...
         backgroundColor: Colors.white,
         elevation: 1,
         shadowColor: AppColors.cardBorder,
-        leading: Builder( // <-- ¡CORREGIDO!
-            builder: (BuildContext builderContext) {
-              return IconButton(
-                icon: const Icon(
-                  Icons.menu,
-                  color: AppColors.iconColor,
-                  size: 30,
-                ),
-                onPressed: () {
-                  Scaffold.of(builderContext).openDrawer(); // <-- ¡CORREGIDO!
-                },
-              );
-            }
-        ),
+        leading: Builder(builder: (ctx) {
+          return IconButton(
+            icon: const Icon(Icons.menu, color: AppColors.iconColor, size: 30),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          );
+        }),
         title: const Text(
           'OsitoPolar',
           style: TextStyle(
@@ -67,11 +55,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
       drawer: const ProviderDrawer(),
       body: _buildBody(context, provider, state),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Navega a la pantalla de añadir Y ESPERA
+        onPressed: _isProcessing
+            ? null
+            : () async {
           await Navigator.pushNamed(context, '/provider_add_equipment');
-
-          // CUANDO VUELVE, refresca la lista
           if (mounted) {
             context.read<ProviderHomeProvider>().loadDashboardData();
           }
@@ -84,56 +71,43 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  /// Helper para construir el cuerpo de la pantalla según el estado
-  Widget _buildBody(BuildContext context, ProviderHomeProvider provider, ProviderHomeState state) {
+  Widget _buildBody(
+      BuildContext context, ProviderHomeProvider provider, ProviderHomeState state) {
     switch (state) {
       case ProviderHomeState.initial:
       case ProviderHomeState.loading:
-      // Muestra un spinner mientras carga
         return const Center(child: CircularProgressIndicator());
       case ProviderHomeState.error:
-      // Muestra un mensaje de error si la API falla
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Error: ${provider.errorMessage}\n\n'
-                  '(Revisa la consola para más detalles. '
-                  'Asegúrate de que el back-end esté corriendo y que '
-                  'el token se esté enviando correctamente.)',
+              'Error: ${provider.errorMessage}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
             ),
           ),
         );
       case ProviderHomeState.success:
-      // Muestra el nuevo diseño del dashboard
         return _buildDashboardContent(context, provider);
     }
   }
 
-  /// El contenido del dashboard (basado en 'image_50263b.png')
-  Widget _buildDashboardContent(BuildContext context, ProviderHomeProvider provider) {
+  Widget _buildDashboardContent(
+      BuildContext context, ProviderHomeProvider provider) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- SECCIÓN: MIS EQUIPOS ---
-            _buildSectionTitle(context, 'Mis equipos'),
+            _buildSectionTitle('Mis equipos'),
             const SizedBox(height: 8),
-            // Pasamos el provider completo
             _buildEquipmentList(context, provider),
             const SizedBox(height: 24),
-
-            // --- SECCIÓN: MANTENIMIENTOS ---
-            _buildSectionTitle(context, 'Mantenimientos'),
+            _buildSectionTitle('Marketplace de Servicios'),
             const SizedBox(height: 8),
-            // --- ¡MODIFICADO! Pasamos la lista REAL ---
             _buildMaintenanceList(context, provider.serviceRequests),
-
-            // (Añadimos espacio al final para que el FAB no tape contenido)
             const SizedBox(height: 80),
           ],
         ),
@@ -141,30 +115,23 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  /// Helper para construir los títulos de sección (ej. "Mis equipos")
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.bold,
-          fontSize: 22, // Más grande
-          color: AppColors.title,
-        ),
+  Widget _buildSectionTitle(String title) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.bold,
+        fontSize: 22,
+        color: AppColors.title,
       ),
-    );
-  }
+    ),
+  );
 
-  /// Helper para la lista de equipos (horizontal)
-  /// Acepta el 'ProviderHomeProvider'
-  Widget _buildEquipmentList(BuildContext context, ProviderHomeProvider provider) {
-    // Obtenemos la lista DESDE el provider
+  Widget _buildEquipmentList(
+      BuildContext context, ProviderHomeProvider provider) {
     final equipments = provider.equipments;
-
     if (equipments.isEmpty) {
-      // Muestra un mensaje si la API no devuelve nada
       return Card(
         elevation: 0,
         color: AppColors.cardBackground,
@@ -185,18 +152,15 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
       );
     }
 
-    // Lista horizontal con 'PageView' para el efecto de carrusel
     return SizedBox(
-      height: 480, // Altura fija para la tarjeta (ajusta según sea necesario)
+      height: 480,
       child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9), // Muestra parte de la sig/ant
+        controller: PageController(viewportFraction: 0.9),
         itemCount: equipments.length,
         itemBuilder: (context, index) {
           final equipment = equipments[index];
-          // Añadimos un padding horizontal para el efecto de carrusel
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            // ¡Esta llamada AHORA SÍ es válida!
             child: _buildEquipmentCard(context, provider, equipment),
           );
         },
@@ -204,11 +168,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  /// Tarjeta de Equipo (basada en 'image_50263b.png')
-  /// ¡Acepta el 'ProviderHomeProvider' para el 'delete'!
-  Widget _buildEquipmentCard(BuildContext context, ProviderHomeProvider provider, EquipmentEntity equipment) {
-
-    final statusColor = (equipment.status.toLowerCase() == 'active' || equipment.status.toLowerCase() == 'normal')
+  Widget _buildEquipmentCard(
+      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+    final statusColor =
+    (eq.status.toLowerCase() == 'active' || eq.status.toLowerCase() == 'normal')
         ? Colors.green
         : Colors.red;
 
@@ -224,45 +187,32 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // --- 1. Fila de Título y Estado ---
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.power_settings_new, color: Colors.green, size: 30),
+                const Icon(Icons.power_settings_new, color: Colors.green, size: 30),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        equipment.name, // "Industrial Freezer XK-400"
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppColors.textColor,
-                        ),
-                      ),
-                      Text(
-                        '${equipment.type} ${equipment.model}', // "Congelador XK-400"
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          color: AppColors.textColor,
-                        ),
-                      ),
+                      Text(eq.name,
+                          style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
+                      Text('${eq.type} ${eq.model}',
+                          style:
+                          const TextStyle(fontFamily: 'Inter', fontSize: 14)),
                     ],
                   ),
                 ),
                 CircleAvatar(radius: 8, backgroundColor: statusColor),
               ],
             ),
-            const SizedBox(height: 24),
-
-            // --- 2. Imagen (Placeholder) ---
+            const SizedBox(height: 20),
             Container(
               width: 100,
-              height: 130,
+              height: 120,
               decoration: BoxDecoration(
                 color: AppColors.textFieldBackground,
                 borderRadius: BorderRadius.circular(8),
@@ -272,30 +222,14 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   color: AppColors.textColor, size: 60),
             ),
             const SizedBox(height: 16),
-
-            // --- 3. Temperatura ---
-            Text(
-              '${equipment.currentTemperature.toStringAsFixed(0)}°', // "25°"
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.bold,
-                fontSize: 50,
-                color: AppColors.textColor,
-              ),
-            ),
-            Text(
-              '(${equipment.status})', // "(normal)"
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: AppColors.textColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // --- 4. Localización ---
+            Text('${eq.currentTemperature.toStringAsFixed(0)}°',
+                style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 50)),
+            Text('(${eq.status})',
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 16)),
+            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -303,47 +237,32 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.location_on, color: AppColors.textColor, size: 18),
+                  const Icon(Icons.location_on, size: 18),
                   const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      equipment.locationName, // "San Isidro Main Warehouse"
+                  Text(eq.locationName,
                       style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textColor,
-                      ),
-                    ),
-                  ),
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
-            const Spacer(), // <-- Ocupa el espacio restante
-
-            // --- 5. Fila de Botones (¡Aquí están!) ---
+            const Spacer(),
             Row(
               children: [
-                // Botón Control (¡Este navega al Detalle!)
                 Expanded(
                   flex: 3,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      // ¡Acción 1! Navegamos al detalle completo
-                      Navigator.pushNamed(
-                        context,
-                        '/provider_equipment_detail', // La pantalla que SÍ tiene el diseño de detalle
-                        arguments: equipment.id,
-                      );
-                    },
-                    icon: const Icon(Icons.settings, size: 16),
-                    label: const Text('Control'),
+                    onPressed: _isProcessing
+                        ? null
+                        : () => _showPublishDialog(context, provider, eq),
+                    icon: const Icon(Icons.public, size: 16),
+                    label: const Text('Publicar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryButton,
-                      foregroundColor: AppColors.buttonLabel,
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -351,53 +270,31 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Botones Editar y Borrar
                 Expanded(
                   flex: 2,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: IconButton(
-                          icon: const Icon(Icons.edit, size: 20),
-                          onPressed: () async {
-                            // 1. Navega a la pantalla de Añadir/Editar
-                            // 2. ¡LE PASA EL ID DEL EQUIPO!
-                            await Navigator.pushNamed(
-                              context,
-                              '/provider_add_equipment',
-                              arguments: equipment.id, // <-- ¡LA CLAVE!
-                            );
-
-                            // 3. Cuando vuelve, refresca la lista
-                            if (mounted) {
-                              provider.loadDashboardData();
-                            }
-                          },
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.primaryButton,
-                            foregroundColor: AppColors.buttonLabel,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: IconButton(
-                          icon: const Icon(Icons.delete, size: 20),
-                          onPressed: () {
-                            // (¡Esta es la lógica que implementamos!)
-                            _showDeleteConfirmationDialog(context, provider, equipment);
-                          },
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.primaryButton,
-                            foregroundColor: AppColors.buttonLabel,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: IconButton(
+                    icon: const Icon(Icons.public_off, size: 20),
+                    onPressed: _isProcessing
+                        ? null
+                        : () => _showUnpublishDialog(context, provider, eq),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey[600],
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: IconButton(
+                    icon: const Icon(Icons.delete, size: 20),
+                    onPressed: _isProcessing
+                        ? null
+                        : () => _showDeleteDialog(context, provider, eq),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.red[700],
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -408,61 +305,151 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  /// Muestra un diálogo de alerta antes de borrar un equipo.
-  void _showDeleteConfirmationDialog(BuildContext context, ProviderHomeProvider provider, EquipmentEntity equipment) {
+  // --- Diálogo: Delete ---
+  void _showDeleteDialog(
+      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Confirmar Borrado'),
-          content: Text('¿Estás seguro de que quieres borrar el equipo "${equipment.name}"? Esta acción no se puede deshacer.'),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Cierra el diálogo
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Borrar', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
-                // 1. Cierra el diálogo
-                Navigator.of(dialogContext).pop();
-
-                // 2. Llama al provider para borrar
-                final bool success = await provider.deleteEquipment(equipment.id);
-
-                // 3. Muestra un SnackBar con el resultado
-                // (Usamos 'mounted' por si el widget se destruyó)
-                if (!mounted) return;
-
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          success
-                              ? '¡Equipo "${equipment.name}" borrado!'
-                              : 'Error: ${provider.errorMessage}'
-                      ),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                    ),
-                  );
-              },
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar Borrado'),
+        content: Text('¿Borrar "${eq.name}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Borrar'),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isProcessing = true);
+              final success = await provider.deleteEquipment(eq.id);
+              if (success && mounted) await provider.loadDashboardData();
+              setState(() => _isProcessing = false);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(
+                  content: Text(success
+                      ? '¡Equipo "${eq.name}" borrado!'
+                      : 'Error: ${provider.errorMessage}'),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                ));
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  /// Helper para la tarjeta "Mantenimientos" (Datos falsos)
-  Widget _buildMaintenanceList(BuildContext context, List<ServiceRequestEntity> requests) {
+  // --- Diálogo: Publish ---
+  void _showPublishDialog(
+      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+    final priceController = TextEditingController(text: '100.00');
 
+    // 🔹 Guardamos el context raíz (Scaffold) para usarlo luego
+    final rootContext = context;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Publicar Equipo'),
+        content: TextField(
+          controller: priceController,
+          decoration: const InputDecoration(
+            labelText: 'Precio mensual (USD)',
+            prefixIcon: Icon(Icons.attach_money),
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () async {
+              final price = double.tryParse(priceController.text);
+              if (price == null || price <= 0) return;
+              Navigator.pop(ctx); // Cierra el diálogo
+              setState(() => _isProcessing = true);
+
+              final success = await provider.publishEquipment(eq.id, price);
+              if (success && mounted) await provider.loadDashboardData();
+
+              if (!mounted) return;
+              setState(() => _isProcessing = false);
+
+              // 🔹 Usa rootContext (el del Scaffold), no el del diálogo
+              if (rootContext.mounted) {
+                ScaffoldMessenger.of(rootContext)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(
+                    content: Text(success
+                        ? '¡"${eq.name}" publicado exitosamente!'
+                        : 'Error: ${provider.errorMessage}'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ));
+              }
+            },
+            child: const Text('Publicar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Diálogo: Unpublish ---
+  void _showUnpublishDialog(
+      BuildContext context, ProviderHomeProvider provider, EquipmentEntity eq) {
+    final rootContext = context;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ocultar Equipo'),
+        content: Text('¿Ocultar "${eq.name}" del marketplace?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+            child: const Text('Ocultar', style: TextStyle(color: Colors.white)),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isProcessing = true);
+              final success = await provider.unpublishEquipment(eq.id);
+
+              if (success ||
+                  provider.errorMessage.contains('not published for rent')) {
+                if (mounted) await provider.loadDashboardData();
+              }
+
+              setState(() => _isProcessing = false);
+
+              if (rootContext.mounted) {
+                ScaffoldMessenger.of(rootContext)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(
+                    content: Text(
+                      (success ||
+                          provider.errorMessage
+                              .contains('not published for rent'))
+                          ? '¡"${eq.name}" ocultado!'
+                          : 'Error: ${provider.errorMessage}',
+                    ),
+                    backgroundColor: (success ||
+                        provider.errorMessage
+                            .contains('not published for rent'))
+                        ? Colors.green
+                        : Colors.red,
+                  ));
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Marketplace (mantenimientos) ---
+  Widget _buildMaintenanceList(
+      BuildContext context, List<ServiceRequestEntity> requests) {
     if (requests.isEmpty) {
-      // Muestra un mensaje si la API no devuelve nada
       return Card(
         elevation: 0,
         color: AppColors.cardBackground,
@@ -474,7 +461,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           padding: EdgeInsets.all(16.0),
           child: Center(
             child: Text(
-              'No se encontraron mantenimientos.',
+              'No se encontraron mantenimientos en el marketplace.',
               style: TextStyle(fontFamily: 'Inter', color: AppColors.textColor),
               textAlign: TextAlign.center,
             ),
@@ -484,112 +471,48 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     }
 
     return SizedBox(
-      height: 280, // Altura fija para la tarjeta
+      height: 280,
       child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9), // Efecto carrusel
+        controller: PageController(viewportFraction: 0.9),
         itemCount: requests.length,
         itemBuilder: (context, index) {
-          final request = requests[index];
+          final r = requests[index];
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: _buildMaintenanceCard(
-              context,
-              title: request.title, // <-- ¡DATO REAL!
-              client: 'Cliente ID: ${request.clientId ?? 'N/A'}', // <-- ¡DATO REAL!
-              isPending: request.status.toLowerCase() == 'pending', // <-- ¡LÓGICA REAL!
+            child: Card(
+              color: AppColors.cardBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+                side: const BorderSide(color: AppColors.cardBorder, width: 1),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.event_note, size: 60),
+                    const SizedBox(height: 16),
+                    Text(r.title,
+                        style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                    Text('Cliente ID: ${r.clientId ?? 'N/A'}',
+                        style:
+                        const TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white),
+                      child: const Text('Aceptar'),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         },
-      ),
-    );
-  }
-
-  /// Helper para la tarjeta "Mantenimientos"
-  Widget _buildMaintenanceCard(BuildContext context, {required String title, required String client, required bool isPending}) {
-    return Card(
-      elevation: 0,
-      color: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: const BorderSide(color: AppColors.cardBorder, width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            // Imagen (Placeholder)
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.textFieldBackground,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: const Icon(Icons.event_note, // Icono de Mantenimiento
-                  color: AppColors.textColor, size: 60),
-            ),
-            const SizedBox(height: 16),
-            // Título
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: AppColors.textColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Cliente
-            Text(
-              client,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14,
-                color: AppColors.textColor,
-              ),
-            ),
-            const Spacer(), // Ocupa el espacio
-            // Botones
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Lógica de "Solicitar"
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green, // Color del diseño
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text('Solicitar'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      // TODO: Lógica de "Pendiente"
-                    },
-                    child: Text(
-                      'Pendiente',
-                      style: TextStyle(
-                          color: isPending ? Colors.red : Colors.grey, // Color del diseño
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

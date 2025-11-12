@@ -3,28 +3,30 @@ import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/DeleteEquipmentUseCase.dart';
-
 import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
-import 'package:osito_polar_app/feature/service_request/domain/usecases/GetServiceRequestsUseCase.dart';
+import 'package:osito_polar_app/feature/service_request/domain/usecases/GetAvailableServiceRequestsUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/PublishEquipmentUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/UnpublishEquipmentUseCase.dart';
+// (Importa NoParams)
+import 'package:osito_polar_app/core/usecases/UseCase.dart';
+
 /// Define los posibles estados de la UI para el Dashboard (Provider Home).
-enum ProviderHomeState {
-  initial,
-  loading,
-  success,
-  error
-}
+enum ProviderHomeState { initial, loading, success, error }
 
 /// El "ViewModel" para la pantalla de ProviderHomePage.
 class ProviderHomeProvider extends ChangeNotifier {
   final GetEquipmentsUseCase getEquipmentsUseCase;
-  // TODO: Añadir aquí los UseCases para Clientes, Técnicos, etc.
   final DeleteEquipmentUseCase deleteEquipmentUseCase;
-  final GetServiceRequestsUseCase getServiceRequestsUseCase;
+  final GetAvailableServiceRequestsUseCase getAvailableServiceRequestsUseCase;
+  final PublishEquipmentUseCase publishEquipmentUseCase;
+  final UnpublishEquipmentUseCase unpublishEquipmentUseCase;
+
   ProviderHomeProvider({
     required this.getEquipmentsUseCase,
     required this.deleteEquipmentUseCase,
-    required this.getServiceRequestsUseCase,
-    // ...
+    required this.getAvailableServiceRequestsUseCase,
+    required this.publishEquipmentUseCase,
+    required this.unpublishEquipmentUseCase,
   });
 
   // --- Estados de la UI ---
@@ -37,10 +39,8 @@ class ProviderHomeProvider extends ChangeNotifier {
   // --- Datos ---
   List<EquipmentEntity> _equipments = [];
   List<EquipmentEntity> get equipments => _equipments;
-  // TODO: Añadir listas para Clientes, Técnicos, etc.
   List<ServiceRequestEntity> _serviceRequests = [];
   List<ServiceRequestEntity> get serviceRequests => _serviceRequests;
-  // --- Lógica de Negocio ---
 
   /// Método que la UI llamará en `initState()` para cargar todos los datos.
   Future<void> loadDashboardData() async {
@@ -48,26 +48,32 @@ class ProviderHomeProvider extends ChangeNotifier {
     notifyListeners();
 
     // 1. Llama al UseCase de Equipos
+    // --- ¡AJUSTE AQUÍ! ---
     final failureOrEquipments = await getEquipmentsUseCase();
 
-    // 2. Maneja la respuesta (Either<Failure, List<EquipmentEntity>>)
+    // 2. Maneja la respuesta
     failureOrEquipments.fold(
           (failure) {
-        // --- Caso de Error ---
         _errorMessage = _mapFailureToMessage(failure);
         _state = ProviderHomeState.error;
       },
           (equipmentList) {
-        // --- Caso de Éxito ---
         _equipments = equipmentList;
         _state = ProviderHomeState.success;
       },
     );
 
-    // TODO: Llamar a los UseCases de Clientes, Técnicos, etc. aquí.
-    final failureOrServiceRequests = await getServiceRequestsUseCase();
+    // Si la carga de equipos falla, salimos
+    if (_state == ProviderHomeState.error) {
+      notifyListeners();
+      return;
+    }
 
-    // 4. Manejamos la respuesta de Mantenimientos
+    // 3. Llama al UseCase de Service Requests
+    final failureOrServiceRequests =
+    await getAvailableServiceRequestsUseCase(NoParams());
+
+    // 4. Maneja la respuesta
     failureOrServiceRequests.fold(
           (failure) {
         _errorMessage = _mapFailureToMessage(failure);
@@ -78,52 +84,93 @@ class ProviderHomeProvider extends ChangeNotifier {
         _state = ProviderHomeState.success; // ¡Éxito total!
       },
     );
-    // Notifica a la UI sobre el nuevo estado (éxito o error)
     notifyListeners();
   }
 
+  /// --- ¡MÉTODO DELETE CORREGIDO! ---
   Future<bool> deleteEquipment(int equipmentId) async {
-    // No ponemos el estado en 'loading' para no ocultar la lista,
-    // la UI mostrará su propio feedback (ej. un SnackBar)
-
     final failureOrSuccess = await deleteEquipmentUseCase(equipmentId);
 
-    bool success = false; // Variable para rastrear el resultado
-
+    bool success = false;
     failureOrSuccess.fold(
           (failure) {
-        // --- Caso de Error ---
         _errorMessage = _mapFailureToMessage(failure);
-        // No cambiamos el estado principal, solo devolvemos el error
         success = false;
       },
           (_) {
-        // --- Caso de Éxito ---
-        _errorMessage = ''; // Limpiamos errores anteriores
+        _errorMessage = '';
         success = true;
-        // ¡No notificamos todavía!
       },
     );
 
-    if (success) {
-      // Si el 'delete' fue exitoso, VOLVEMOS a cargar la lista
-      // para que el equipo borrado desaparezca de la UI.
-      // 'loadDashboardData' se encargará de llamar a 'notifyListeners()'.
-      await loadDashboardData();
-    } else {
-      // Si falló, notificamos para que la UI muestre el error (si es necesario)
-      notifyListeners();
-    }
-
+    // ¡Ya no llamamos a loadDashboardData() aquí!
+    notifyListeners(); // Solo notifica (en caso de error)
     return success; // Devolvemos el resultado a la UI
+  }
+
+  /// --- ¡MÉTODO PUBLISH CORREGIDO! ---
+  Future<bool> publishEquipment(int equipmentId, double monthlyFee) async {
+    final params = PublishEquipmentParams(
+      equipmentId: equipmentId,
+      monthlyFee: monthlyFee,
+      startDate: DateTime.now(),
+      endDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    final failureOrSuccess = await publishEquipmentUseCase(params);
+
+    bool success = false;
+    failureOrSuccess.fold(
+          (failure) {
+        _errorMessage = _mapFailureToMessage(failure);
+        success = false;
+      },
+          (updatedEquipment) {
+        _errorMessage = '';
+        success = true;
+      },
+    );
+
+
+    notifyListeners();
+    return success;
+  }
+
+
+  /// --- ¡MÉTODO UNPUBLISH CORREGIDO! ---
+  Future<bool> unpublishEquipment(int equipmentId) async {
+    final failureOrSuccess = await unpublishEquipmentUseCase(equipmentId);
+
+    bool success = false;
+    failureOrSuccess.fold(
+          (failure) {
+        _errorMessage = _mapFailureToMessage(failure);
+        success = false;
+      },
+          (updatedEquipment) {
+        _errorMessage = '';
+        success = true;
+      },
+    );
+
+
+    notifyListeners();
+
+    return success;
   }
 
 
   /// Convierte un objeto Failure en un mensaje legible para el usuario.
   String _mapFailureToMessage(Failure failure) {
+    // 1. Comprueba si es un ServerFailure Y si tiene un mensaje.
+    if (failure is ServerFailure && failure.message != null) {
+      // ¡Si tiene mensaje, úsalo! (Ej. "403 Forbidden")
+      return failure.message!;
+    }
+
+    // 2. Si no, usa un mensaje genérico.
     switch (failure.runtimeType) {
       case ServerFailure:
-      // TODO: Mejorar mensajes (ej. "Token expirado, vuelve a iniciar sesión")
         return 'Error del servidor. Inténtalo más tarde.';
       default:
         return 'Un error inesperado ocurrió.';

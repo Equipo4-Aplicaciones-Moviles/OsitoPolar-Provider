@@ -16,4 +16,17 @@ abstract class EquipmentRepository {
   Future<Either<Failure, void>> deleteEquipment(int equipmentId);
   Future<Either<Failure, EquipmentEntity>> updateEquipment(
       int equipmentId, Map<String, dynamic> equipmentData);
+
+  Future<Either<Failure, EquipmentEntity>> publishEquipment({
+    required int equipmentId,
+    required double monthlyFee,
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Oculta (Unpublish) un equipo del marketplace de alquiler.
+  /// Llama a DELETE /api/v1/equipments/{id}/rental
+  Future<Either<Failure, EquipmentEntity>> unpublishEquipment({
+    required int equipmentId,
+  });
 }

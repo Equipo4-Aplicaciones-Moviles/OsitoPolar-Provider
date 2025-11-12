@@ -1,13 +1,22 @@
 import 'package:equatable/equatable.dart';
 
-/// Una clase base abstracta para los Fallos (Errores) en la app.
-/// Usamos Equatable para poder compararlos.
 abstract class Failure extends Equatable {
+  // ¡Modificado para aceptar un 'message'!
+  final String? message;
+
+  const Failure({this.message});
+
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [message];
 }
 
-// Fallos generales de la app
-class ServerFailure extends Failure {} // Error del servidor (500, etc.)
-class NetworkFailure extends Failure {} // Error de conexión
-class CacheFailure extends Failure {} // Error de caché (ej. SharedPreferences)
+/// Falla General del Servidor (4xx, 5xx)
+class ServerFailure extends Failure {
+  // ¡Ahora le pasamos el 'message' a la clase base!
+  const ServerFailure({String? message}) : super(message: message);
+}
+
+/// Falla de Caché (SharedPreferences, etc.)
+class CacheFailure extends Failure {
+  const CacheFailure({String? message}) : super(message: message);
+}

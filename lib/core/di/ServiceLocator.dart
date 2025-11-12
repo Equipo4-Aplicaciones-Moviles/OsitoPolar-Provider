@@ -19,6 +19,8 @@ import 'package:osito_polar_app/feature/equipment/data/repositories/EquipmentRep
 import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentRepository.dart';
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/PublishEquipmentUseCase.dart';
+import 'package:osito_polar_app/feature/equipment/domain/usecases/UnpublishEquipmentUseCase.dart';
 
 import 'package:osito_polar_app/feature/equipment/domain/usecases/CreateEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
@@ -33,7 +35,7 @@ import 'package:osito_polar_app/feature/service_request/data/datasource/ServiceR
 import 'package:osito_polar_app/feature/service_request/data/repositories/ServiceRequestRepositoryImpl.dart';
 import 'package:osito_polar_app/feature/service_request/domain/repositories/ServiceRequestRepository.dart';
 import 'package:osito_polar_app/feature/service_request/domain/usecases/GetServiceRequestsUseCase.dart';
-
+import 'package:osito_polar_app/feature/service_request/domain/usecases/GetAvailableServiceRequestsUseCase.dart';
 final sl = GetIt.instance;
 
 Future<void> setupLocator() async {
@@ -99,6 +101,8 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => GetEquipmentByIdUseCase(sl()));
   sl.registerLazySingleton(() => DeleteEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => UpdateEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => PublishEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => UnpublishEquipmentUseCase(sl()));
   // A. Providers (Depende de 'UseCases')
 
   sl.registerFactory(
@@ -122,7 +126,8 @@ Future<void> setupLocator() async {
         () => ServiceRequestRepositoryImpl(remoteDataSource: sl()),
   );
   // B. UseCases
-  sl.registerLazySingleton(() => GetServiceRequestsUseCase(sl()));
+  //sl.registerLazySingleton(() => GetServiceRequestsUseCase(sl()));
+  sl.registerLazySingleton(() => GetAvailableServiceRequestsUseCase(sl()));
 
   // A. Providers
   // (Actualizamos el 'ProviderHomeProvider' que ya existía)
@@ -131,7 +136,9 @@ Future<void> setupLocator() async {
         () => ProviderHomeProvider(
       getEquipmentsUseCase: sl(),
       deleteEquipmentUseCase: sl(),
-      getServiceRequestsUseCase: sl(), // <-- ¡AÑADIDO!
+          getAvailableServiceRequestsUseCase: sl(),
+          publishEquipmentUseCase: sl(),
+          unpublishEquipmentUseCase: sl(),// <-- ¡AÑADIDO!
     ),
   );
 

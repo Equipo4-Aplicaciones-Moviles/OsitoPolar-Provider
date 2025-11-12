@@ -32,6 +32,26 @@ class ServiceRequestRepositoryImpl implements ServiceRequestRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, List<ServiceRequestEntity>>> getAvailableServiceRequests() async {
+    // Este método llama al 'getAvailableServiceRequests' del DataSource,
+    // que SÍ está conectado a la API del Marketplace.
+    try {
+      final remoteServiceRequests = await remoteDataSource.getAvailableServiceRequests();
+
+      // Mapeamos los 'Models' (datos de la API) a 'Entities' (datos limpios de la app)
+      // Si tu 'ServiceRequestModel' tiene un método .toEntity(), es mejor.
+      // Por ahora, un 'cast' simple funcionará si los modelos heredan de las entidades.
+      return Right(remoteServiceRequests.cast<ServiceRequestEntity>());
+
+    } on Exception catch(e) {
+      // Pasamos el mensaje de error para mostrarlo en la UI
+      return Left(ServerFailure());
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
   /// Helper privado para mapear el Modelo a la Entidad
   ServiceRequestEntity _mapModelToEntity(ServiceRequestModel model) {
     return ServiceRequestEntity(

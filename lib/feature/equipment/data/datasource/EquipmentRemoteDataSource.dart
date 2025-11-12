@@ -19,5 +19,17 @@ abstract class EquipmentRemoteDataSource {
   Future<EquipmentModel> updateEquipment(
       int equipmentId, CreateEquipmentModel equipment);
 
+  Future<EquipmentModel> publishEquipment({
+    required int equipmentId,
+    required double monthlyFee,
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Llama a: DELETE /api/v1/equipments/{id}/rental
+  Future<EquipmentModel> unpublishEquipment({
+    required int equipmentId,
+  });
+
 // TODO: Añadir métodos para getEquipmentById, createEquipment, etc.
 }
