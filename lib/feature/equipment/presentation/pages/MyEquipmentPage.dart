@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 // --- ¡MODIFICADO! ---
 // Borramos ProviderHomeProvider e importamos el provider correcto
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
@@ -335,19 +336,28 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
               final success = await provider.deleteEquipment(eq.id);
+
+              Fluttertoast.showToast(
+                msg: success
+                    ? '¡Equipo "${eq.name}" borrado!'
+                    : 'Error: ${provider.errorMessage}',
+                backgroundColor: success ? Colors.green : Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+                gravity: ToastGravity.BOTTOM, // (Aparece abajo)
+                webBgColor: success ? "#4CAF50" : "#F44336", // (Color para web)
+                timeInSecForIosWeb: 3,
+              );
+
+              // 2. Si tuvo éxito, refresca la lista
               if (success && mounted) {
-                await provider.loadEquipments(); // <-- ¡Llama al método correcto!
+                await provider.loadEquipments();
               }
-              setState(() => _isProcessing = false);
-              if (!mounted) return;
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text(success
-                      ? '¡Equipo "${eq.name}" borrado!'
-                      : 'Error: ${provider.errorMessage}'),
-                  backgroundColor: success ? Colors.green : Colors.red,
-                ));
+
+              if (mounted) {
+                setState(() => _isProcessing = false);
+              }
+
             },
           ),
         ],
@@ -385,22 +395,27 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               setState(() => _isProcessing = true);
 
               final success = await provider.publishEquipment(eq.id, price);
+              // --- ¡LÓGICA CORREGIDA! ---
+              // 1. Muestra el Toast (flotante)
+              Fluttertoast.showToast(
+                msg: success
+                    ? '¡"${eq.name}" publicado exitosamente!'
+                    : 'Error: ${provider.errorMessage}',
+                backgroundColor: success ? Colors.green : Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+                gravity: ToastGravity.BOTTOM,
+                webBgColor: success ? "#4CAF50" : "#F44336",
+                timeInSecForIosWeb: 3,
+              );
+
+              // 2. Si tuvo éxito, refresca la lista
               if (success && mounted) {
-                await provider.loadEquipments(); // <-- ¡Llama al método correcto!
+                await provider.loadEquipments();
               }
 
-              if (!mounted) return;
-              setState(() => _isProcessing = false);
-
-              if (rootContext.mounted) {
-                ScaffoldMessenger.of(rootContext)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(
-                    content: Text(success
-                        ? '¡"${eq.name}" publicado exitosamente!'
-                        : 'Error: ${provider.errorMessage}'),
-                    backgroundColor: success ? Colors.green : Colors.red,
-                  ));
+              if (mounted) {
+                setState(() => _isProcessing = false);
               }
             },
             child: const Text('Publicar', style: TextStyle(color: Colors.white)),
@@ -429,27 +444,29 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
               final success = await provider.unpublishEquipment(eq.id);
+              final bool wasAlreadyUnpublished = provider.errorMessage.contains('not published for rent');
 
-              // (Tu lógica de 'contains' está bien)
-              if (success || provider.errorMessage.contains('not published for rent')) {
-                if (mounted) await provider.loadEquipments(); // <-- ¡Llama al método correcto!
+              // --- ¡LÓGICA CORREGIDA! ---
+              // 1. Muestra el Toast (flotante)
+              Fluttertoast.showToast(
+                msg: (success || wasAlreadyUnpublished)
+                    ? '¡"${eq.name}" ocultado!'
+                    : 'Error: ${provider.errorMessage}',
+                backgroundColor: (success || wasAlreadyUnpublished) ? Colors.green : Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+                gravity: ToastGravity.BOTTOM,
+                webBgColor: (success || wasAlreadyUnpublished) ? "#4CAF50" : "#F44336",
+                timeInSecForIosWeb: 3,
+              );
+
+              // 2. Si tuvo éxito, refresca la lista
+              if ((success || wasAlreadyUnpublished) && mounted) {
+                await provider.loadEquipments();
               }
 
-              setState(() => _isProcessing = false);
-
-              if (rootContext.mounted) {
-                ScaffoldMessenger.of(rootContext)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(
-                    content: Text(
-                      (success || provider.errorMessage.contains('not published for rent'))
-                          ? '¡"${eq.name}" ocultado!'
-                          : 'Error: ${provider.errorMessage}',
-                    ),
-                    backgroundColor: (success || provider.errorMessage.contains('not published for rent'))
-                        ? Colors.green
-                        : Colors.red,
-                  ));
+              if (mounted) {
+                setState(() => _isProcessing = false);
               }
             },
           ),
