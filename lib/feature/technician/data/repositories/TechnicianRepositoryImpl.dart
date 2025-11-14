@@ -36,4 +36,18 @@ class TechnicianRepositoryImpl implements TechnicianRepository {
       return Left(ServerFailure(message: e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, TechnicianEntity>> getTechnicianById(
+      int technicianId) async {
+    try {
+      final technicianModel =
+      await remoteDataSource.getTechnicianById(technicianId);
+      return Right(technicianModel.toEntity());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
 }

@@ -181,31 +181,41 @@ class _ProviderClientsTechniciansPageState
         borderRadius: BorderRadius.circular(12.0),
         side: const BorderSide(color: AppColors.cardBorder, width: 1),
       ),
-      child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: AppColors.primaryButton,
-          foregroundColor: AppColors.buttonLabel,
-          child: Icon(Icons.person),
-        ),
-        title: Text(
-          technician.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textColor,
-            fontFamily: 'Inter',
-          ),
-        ),
-        subtitle: Text(
-          technician.specialization ?? 'Sin especialización',
-          style: const TextStyle(
-            color: AppColors.textColor,
-            fontFamily: 'Inter',
-          ),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, color: AppColors.iconColor, size: 16),
+      // --- ¡MODIFICADO! ---
+      // (Envolvimos el ListTile en un InkWell para el 'onTap')
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.0),
         onTap: () {
-          // TODO: Navegar a la página de detalles del técnico
+          // ¡Navega a la página de detalle y pasa el ID!
+          Navigator.pushNamed(
+            context,
+            '/provider_technician_detail',
+            arguments: technician.id,
+          );
         },
+        child: ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: AppColors.primaryButton,
+            foregroundColor: AppColors.buttonLabel,
+            child: Icon(Icons.person),
+          ),
+          title: Text(
+            technician.name,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textColor,
+              fontFamily: 'Inter',
+            ),
+          ),
+          subtitle: Text(
+            technician.specialization ?? 'Sin especialización',
+            style: const TextStyle(
+              color: AppColors.textColor,
+              fontFamily: 'Inter',
+            ),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: AppColors.iconColor, size: 16),
+        ),
       ),
     );
   }

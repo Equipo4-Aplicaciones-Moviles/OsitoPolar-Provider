@@ -14,5 +14,7 @@ abstract class TechnicianRepository {
   Future<Either<Failure, TechnicianEntity>> createTechnician(
       {required Map<String, dynamic> technicianData});
 
+  Future<Either<Failure, TechnicianEntity>> getTechnicianById(int technicianId);
+
 // (En el futuro, podríamos añadir: updateTechnician, deleteTechnician, etc.)
 }

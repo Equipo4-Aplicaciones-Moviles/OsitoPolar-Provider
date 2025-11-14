@@ -52,6 +52,8 @@ import 'package:osito_polar_app/feature/technician/data/datasource/TechnicianRem
 import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianUseCase.dart';
 import 'package:osito_polar_app/feature/technician/domain/usecases/CreateTechnicianUseCase.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart'; // (Lo crearemos en el siguiente paso)
+import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianByIdUseCase.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
 
 final sl = GetIt.instance;
 
@@ -140,10 +142,14 @@ Future<void> setupLocator() async {
   // B. UseCases
   sl.registerLazySingleton(() => GetTechniciansUseCase(sl()));
   sl.registerLazySingleton(() => CreateTechnicianUseCase(sl()));
+  sl.registerLazySingleton(() => GetTechnicianByIdUseCase(sl()));
 
   // A. Providers
   sl.registerFactory(() => TechnicianProvider(
     getTechniciansUseCase: sl(),
     createTechnicianUseCase: sl(),
+  ));
+  sl.registerFactory(() => TechnicianDetailProvider( // (El del detalle)
+    getTechnicianByIdUseCase: sl(),
   ));
 }

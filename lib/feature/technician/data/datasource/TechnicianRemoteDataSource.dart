@@ -10,4 +10,6 @@ abstract class TechnicianRemoteDataSource {
   /// Arroja [ServerException] si falla.
   Future<TechnicianModel> createTechnician(
       {required Map<String, dynamic> technicianData});
+
+  Future<TechnicianModel> getTechnicianById(int technicianId);
 }

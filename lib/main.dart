@@ -10,6 +10,7 @@ import 'package:osito_polar_app/feature/authentication/presentation/providers/Re
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
 // --- ¡NUESTROS 3 PROVIDERS DE APP! ---
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart'; // (Para el Dashboard)
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';             // (Para Mis Equipos)
@@ -26,7 +27,7 @@ import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmen
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderEquipmentDetailPage.dart';
 import 'package:osito_polar_app/feature/technician/presentation/pages/ProviderClientsTechniciansPage.dart';
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
-
+import 'package:osito_polar_app/feature/technician/presentation/pages/TechniciansDetailPage.dart';
 // principales
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderHomePage.dart';     // (El Dashboard/Resumen)
 import 'package:osito_polar_app/feature/equipment/presentation/pages/MyEquipmentPage.dart';          // (La Lista de Equipos)
@@ -54,6 +55,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => sl<MarketplaceProvider>()),
 
         ChangeNotifierProvider(create: (_) => sl<TechnicianProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<TechnicianDetailProvider>()),
       ],
       child: const MyApp(),
     ),
@@ -183,6 +185,13 @@ class MyApp extends StatelessWidget {
             final equipmentId = settings.arguments as int?;
             return MaterialPageRoute(
               builder: (context) => AddEquipmentPage(equipmentId: equipmentId),
+            );
+
+          case '/provider_technician_detail':
+          // Leemos el ID que pasamos como argumento
+            final technicianId = settings.arguments as int;
+            return MaterialPageRoute(
+              builder: (context) => TechnicianDetailPage(technicianId: technicianId),
             );
 
         // (Otras páginas)

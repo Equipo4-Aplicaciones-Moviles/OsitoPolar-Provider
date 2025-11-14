@@ -64,4 +64,31 @@ class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
       throw ServerException(message: 'Error al crear técnico: ${response.statusCode}');
     }
   }
+
+  @override
+  Future<TechnicianModel> getTechnicianById(int technicianId) async {
+    final token = prefs.getString('auth_token');
+    if (token == null) throw ServerException(message: 'Token no encontrado');
+
+    final url = Uri.parse('$baseUrl/api/v1/technicians/$technicianId');
+    print('Llamando a API (GET Technician By ID): $url');
+
+    final response = await client.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // Devuelve el técnico parseado
+      return TechnicianModel.fromJson(response.body);
+    } else if (response.statusCode == 404) {
+      throw ServerException(message: 'Técnico no encontrado (404)');
+    } else {
+      print('Error al obtener técnico: ${response.statusCode} ${response.body}');
+      throw ServerException(message: 'Error al obtener técnico: ${response.statusCode}');
+    }
+  }
 }
