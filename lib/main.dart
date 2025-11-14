@@ -9,7 +9,8 @@ import 'package:osito_polar_app/feature/authentication/presentation/providers/Lo
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
-
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
 // --- ¡NUESTROS 3 PROVIDERS DE APP! ---
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart'; // (Para el Dashboard)
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';             // (Para Mis Equipos)
@@ -24,10 +25,10 @@ import 'package:osito_polar_app/feature/authentication/presentation/pages/Provid
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegistrationSuccessPage.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmentPage.dart';
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderEquipmentDetailPage.dart';
-import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientsTechniciansPage.dart';
+import 'package:osito_polar_app/feature/technician/presentation/pages/ProviderClientsTechniciansPage.dart';
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
-
-// --- ¡Nuestras 3 páginas principales! ---
+import 'package:osito_polar_app/feature/technician/presentation/pages/TechniciansDetailPage.dart';
+// principales
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderHomePage.dart';     // (El Dashboard/Resumen)
 import 'package:osito_polar_app/feature/equipment/presentation/pages/MyEquipmentPage.dart';          // (La Lista de Equipos)
 import 'package:osito_polar_app/feature/service_request/presentation/pages/MarketplacePage.dart';     // (La Lista de Trabajos)
@@ -49,10 +50,12 @@ void main() async {
         ChangeNotifierProvider(create: (_) => sl<AddEquipmentProvider>()),
         ChangeNotifierProvider(create: (_) => sl<EquipmentDetailProvider>()),
 
-        // --- ¡NUESTROS 3 PROVIDERS DE PÁGINA! ---
         ChangeNotifierProvider(create: (_) => sl<ProviderHomeProvider>()),
         ChangeNotifierProvider(create: (_) => sl<EquipmentProvider>()),
         ChangeNotifierProvider(create: (_) => sl<MarketplaceProvider>()),
+
+        ChangeNotifierProvider(create: (_) => sl<TechnicianProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<TechnicianDetailProvider>()),
       ],
       child: const MyApp(),
     ),
@@ -182,6 +185,13 @@ class MyApp extends StatelessWidget {
             final equipmentId = settings.arguments as int?;
             return MaterialPageRoute(
               builder: (context) => AddEquipmentPage(equipmentId: equipmentId),
+            );
+
+          case '/provider_technician_detail':
+          // Leemos el ID que pasamos como argumento
+            final technicianId = settings.arguments as int;
+            return MaterialPageRoute(
+              builder: (context) => TechnicianDetailPage(technicianId: technicianId),
             );
 
         // (Otras páginas)

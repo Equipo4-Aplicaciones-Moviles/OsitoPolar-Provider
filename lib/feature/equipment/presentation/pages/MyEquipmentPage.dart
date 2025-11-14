@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-// --- ¡MODIFICADO! ---
-// Borramos ProviderHomeProvider e importamos el provider correcto
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart';
-// (Ya no necesitamos ServiceRequestEntity aquí)
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -17,21 +13,29 @@ class MyEquipmentPage extends StatefulWidget {
 }
 
 class _MyEquipmentPageState extends State<MyEquipmentPage> {
-  bool _isProcessing = false; // 🔒 bloquea botones durante peticiones
+  bool _isProcessing = false;
+
+  // 🔵 Nueva función universal para mostrar mensajes sin plugins
+  void showAppMessage(String msg, bool success) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // --- ¡MODIFICADO! ---
-      // Llama al método correcto del provider correcto
       context.read<EquipmentProvider>().loadEquipments();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- ¡MODIFICADO! ---
     final provider = context.watch<EquipmentProvider>();
     final state = provider.state;
 
@@ -48,7 +52,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           );
         }),
         title: const Text(
-          'Mis Equipos', // <-- ¡Título actualizado!
+          'Mis Equipos',
           style: TextStyle(
             color: AppColors.logoColor,
             fontWeight: FontWeight.bold,
@@ -66,7 +70,6 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             : () async {
           await Navigator.pushNamed(context, '/provider_add_equipment');
           if (mounted) {
-            // --- ¡MODIFICADO! ---
             context.read<EquipmentProvider>().loadEquipments();
           }
         },
@@ -78,9 +81,43 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- ¡MODIFICADO! ---
-  Widget _buildBody(
-      BuildContext context, EquipmentProvider provider, EquipmentState state) {
+  Widget _buildPublicationBadge(EquipmentEntity eq) {
+    final isPublished = eq.ownershipType=='Rented'; // Usa el getter que añadimos
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isPublished ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isPublished ? Colors.green : Colors.red,
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPublished ? Icons.public : Icons.public_off,
+            size: 18,
+            color: isPublished ? Colors.green : Colors.red,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isPublished ? 'Publicado' : 'No Publicado',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isPublished ? Colors.green : Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, EquipmentProvider provider, EquipmentState state) {
     switch (state) {
       case EquipmentState.initial:
       case EquipmentState.loading:
@@ -101,22 +138,17 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     }
   }
 
-  // --- ¡MODIFICADO! ---
-  Widget _buildDashboardContent(
-      BuildContext context, EquipmentProvider provider) {
+  Widget _buildDashboardContent(BuildContext context, EquipmentProvider provider) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Mi Inventario'), // <-- Título actualizado
+            _buildSectionTitle('Mi Inventario'),
             const SizedBox(height: 8),
             _buildEquipmentList(context, provider),
-            const SizedBox(height: 80), // Espacio para el FAB
-
-            // --- ¡BORRADO! ---
-            // La sección 'Marketplace de Servicios' ya no va aquí.
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -124,7 +156,6 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
   }
 
   Widget _buildSectionTitle(String title) => Padding(
-    // ... (Tu código de _buildSectionTitle está perfecto)
     padding: const EdgeInsets.symmetric(horizontal: 8.0),
     child: Text(
       title,
@@ -137,11 +168,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     ),
   );
 
-  // --- ¡MODIFICADO! ---
-  Widget _buildEquipmentList(
-      BuildContext context, EquipmentProvider provider) {
-    // ... (Tu código de _buildEquipmentList está perfecto)
+  Widget _buildEquipmentList(BuildContext context, EquipmentProvider provider) {
     final equipments = provider.equipments;
+
     if (equipments.isEmpty) {
       return Card(
         elevation: 0,
@@ -179,12 +208,8 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- ¡MODIFICADO! ---
-  Widget _buildEquipmentCard(
-      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
-    // ... (Tu código de _buildEquipmentCard está perfecto)
-    final statusColor =
-    (eq.status.toLowerCase() == 'active' || eq.status.toLowerCase() == 'normal')
+  Widget _buildEquipmentCard(BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
+    final statusColor = (eq.status.toLowerCase() == 'active' || eq.status.toLowerCase() == 'normal')
         ? Colors.green
         : Colors.red;
 
@@ -196,130 +221,156 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
         borderRadius: BorderRadius.circular(16.0),
         side: const BorderSide(color: AppColors.cardBorder, width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Row(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: SingleChildScrollView(
+            child: Column(
               children: [
-                const Icon(Icons.power_settings_new, color: Colors.green, size: 30),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(eq.name,
-                          style: const TextStyle(
+                Row(
+                  children: [
+                    const Icon(Icons.power_settings_new, color: Colors.green, size: 30),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            eq.name,
+                            style: const TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.bold,
-                              fontSize: 16)),
-                      Text('${eq.type} ${eq.model}',
-                          style:
-                          const TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                              fontSize: 16,
+                            ),
+                          ),
+
+                          const SizedBox(height: 6),
+                          _buildPublicationBadge(eq),
+
+                          const SizedBox(height: 6),
+
+                          Text(
+                            '${eq.type} ${eq.model}',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                    CircleAvatar(radius: 8, backgroundColor: statusColor),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                Container(
+                  width: 100,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.textFieldBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: const Icon(Icons.kitchen_outlined,
+                      color: AppColors.textColor, size: 60),
+                ),
+
+                const SizedBox(height: 16),
+
+                Text(
+                  '${eq.currentTemperature.toStringAsFixed(0)}°',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 50,
+                  ),
+                ),
+
+                Text('(${eq.status})',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 16)),
+
+                const SizedBox(height: 20),
+
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.textFieldBackground.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on, size: 18),
+                      const SizedBox(width: 8),
+                      Text(eq.locationName,
+                          style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                CircleAvatar(radius: 8, backgroundColor: statusColor),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 100,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.textFieldBackground,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: const Icon(Icons.kitchen_outlined,
-                  color: AppColors.textColor, size: 60),
-            ),
-            const SizedBox(height: 16),
-            Text('${eq.currentTemperature.toStringAsFixed(0)}°',
-                style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 50)),
-            Text('(${eq.status})',
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 16)),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.textFieldBackground.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.location_on, size: 18),
-                  const SizedBox(width: 8),
-                  Text(eq.locationName,
-                      style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: ElevatedButton.icon(
-                    onPressed: _isProcessing
-                        ? null
-                        : () => _showPublishDialog(context, provider, eq),
-                    icon: const Icon(Icons.public, size: 16),
-                    label: const Text('Publicar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+
+                const SizedBox(height: 20), // <- reemplaza Spacer()
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: ElevatedButton.icon(
+                        onPressed: _isProcessing
+                            ? null
+                            : () => _showPublishDialog(context, provider, eq),
+                        icon: const Icon(Icons.public, size: 16),
+                        label: const Text('Publicar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: IconButton(
-                    icon: const Icon(Icons.public_off, size: 20),
-                    onPressed: _isProcessing
-                        ? null
-                        : () => _showUnpublishDialog(context, provider, eq),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.grey[600],
-                      foregroundColor: Colors.white,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: IconButton(
+                        icon: const Icon(Icons.public_off, size: 20),
+                        onPressed: _isProcessing
+                            ? null
+                            : () => _showUnpublishDialog(context, provider, eq),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: IconButton(
-                    icon: const Icon(Icons.delete, size: 20),
-                    onPressed: _isProcessing
-                        ? null
-                        : () => _showDeleteDialog(context, provider, eq),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.red[700],
-                      foregroundColor: Colors.white,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        onPressed: _isProcessing
+                            ? null
+                            : () => _showDeleteDialog(context, provider, eq),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.red[700],
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        )
     );
   }
 
-  // --- ¡MODIFICADO! ---
-  // (El provider ahora es 'EquipmentProvider')
+  // ======================================================
+  //                   DIÁLOGOS DE ACCIONES
+  // ======================================================
+
   void _showDeleteDialog(
       BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
     showDialog(
@@ -335,29 +386,19 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             onPressed: () async {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
+
               final success = await provider.deleteEquipment(eq.id);
 
-              Fluttertoast.showToast(
-                msg: success
-                    ? '¡Equipo "${eq.name}" borrado!'
-                    : 'Error: ${provider.errorMessage}',
-                backgroundColor: success ? Colors.green : Colors.red,
-                textColor: Colors.white,
-                fontSize: 16.0,
-                gravity: ToastGravity.BOTTOM, // (Aparece abajo)
-                webBgColor: success ? "#4CAF50" : "#F44336", // (Color para web)
-                timeInSecForIosWeb: 3,
+              showAppMessage(
+                success ? '¡Equipo "${eq.name}" borrado!' : 'Error: ${provider.errorMessage}',
+                success,
               );
 
-              // 2. Si tuvo éxito, refresca la lista
               if (success && mounted) {
                 await provider.loadEquipments();
               }
 
-              if (mounted) {
-                setState(() => _isProcessing = false);
-              }
-
+              if (mounted) setState(() => _isProcessing = false);
             },
           ),
         ],
@@ -365,12 +406,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- ¡MODIFICADO! ---
-  // (El provider ahora es 'EquipmentProvider')
   void _showPublishDialog(
       BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
     final priceController = TextEditingController(text: '100.00');
-    final rootContext = context;
 
     showDialog(
       context: context,
@@ -388,48 +426,37 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Publicar', style: TextStyle(color: Colors.white)),
             onPressed: () async {
               final price = double.tryParse(priceController.text);
               if (price == null || price <= 0) return;
-              Navigator.pop(ctx); // Cierra el diálogo
+
+              Navigator.pop(ctx);
               setState(() => _isProcessing = true);
 
               final success = await provider.publishEquipment(eq.id, price);
-              // --- ¡LÓGICA CORREGIDA! ---
-              // 1. Muestra el Toast (flotante)
-              Fluttertoast.showToast(
-                msg: success
+
+              showAppMessage(
+                success
                     ? '¡"${eq.name}" publicado exitosamente!'
                     : 'Error: ${provider.errorMessage}',
-                backgroundColor: success ? Colors.green : Colors.red,
-                textColor: Colors.white,
-                fontSize: 16.0,
-                gravity: ToastGravity.BOTTOM,
-                webBgColor: success ? "#4CAF50" : "#F44336",
-                timeInSecForIosWeb: 3,
+                success,
               );
 
-              // 2. Si tuvo éxito, refresca la lista
               if (success && mounted) {
                 await provider.loadEquipments();
               }
 
-              if (mounted) {
-                setState(() => _isProcessing = false);
-              }
+              if (mounted) setState(() => _isProcessing = false);
             },
-            child: const Text('Publicar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  // --- ¡MODIFICADO! ---
-  // (El provider ahora es 'EquipmentProvider')
   void _showUnpublishDialog(
       BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
-    final rootContext = context;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -443,39 +470,27 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             onPressed: () async {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
-              final success = await provider.unpublishEquipment(eq.id);
-              final bool wasAlreadyUnpublished = provider.errorMessage.contains('not published for rent');
 
-              // --- ¡LÓGICA CORREGIDA! ---
-              // 1. Muestra el Toast (flotante)
-              Fluttertoast.showToast(
-                msg: (success || wasAlreadyUnpublished)
-                    ? '¡"${eq.name}" ocultado!'
-                    : 'Error: ${provider.errorMessage}',
-                backgroundColor: (success || wasAlreadyUnpublished) ? Colors.green : Colors.red,
-                textColor: Colors.white,
-                fontSize: 16.0,
-                gravity: ToastGravity.BOTTOM,
-                webBgColor: (success || wasAlreadyUnpublished) ? "#4CAF50" : "#F44336",
-                timeInSecForIosWeb: 3,
+              final success = await provider.unpublishEquipment(eq.id);
+              final alreadyHidden =
+              provider.errorMessage.contains('not published for rent');
+
+              final ok = success || alreadyHidden;
+
+              showAppMessage(
+                ok ? '¡"${eq.name}" ocultado!' : 'Error: ${provider.errorMessage}',
+                ok,
               );
 
-              // 2. Si tuvo éxito, refresca la lista
-              if ((success || wasAlreadyUnpublished) && mounted) {
+              if (ok && mounted) {
                 await provider.loadEquipments();
               }
 
-              if (mounted) {
-                setState(() => _isProcessing = false);
-              }
+              if (mounted) setState(() => _isProcessing = false);
             },
           ),
         ],
       ),
     );
   }
-
-// --- ¡BORRADO! ---
-// (Los métodos _buildMaintenanceList, _buildMaintenanceCard, y _showAcceptDialog
-//  ya no están en esta página).
 }

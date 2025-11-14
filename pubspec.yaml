@@ -43,7 +43,7 @@ dependencies:
 
   flutter_dotenv: ^5.1.0  # Para leer tu archivo .env
   url_launcher: ^6.3.0   # Para abrir la URL de Stripe en el navegador
-  fluttertoast: ^8.2.5
+  fluttertoast: ^8.2.6
 
 dev_dependencies:
   flutter_test:

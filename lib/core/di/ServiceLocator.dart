@@ -43,7 +43,17 @@ import 'package:osito_polar_app/feature/service_request/presentation/providers/M
 // --- PROVIDER DASHBOARD (HOME) IMPORTS ---
 // ¡EL PROVIDER DEL DASHBOARD/RESUMEN!
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
+//TECHNICIAN IMPORTS
 
+import 'package:osito_polar_app/feature/technician/domain/repositories/TechnicianRepository.dart';
+import 'package:osito_polar_app/feature/technician/data/repositories/TechnicianRepositoryImpl.dart';
+import 'package:osito_polar_app/feature/technician/data/datasource/TechnicianRemoteDataSource.dart';
+import 'package:osito_polar_app/feature/technician/data/datasource/TechnicianRemoteDataSourceImpl.dart';
+import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianUseCase.dart';
+import 'package:osito_polar_app/feature/technician/domain/usecases/CreateTechnicianUseCase.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart'; // (Lo crearemos en el siguiente paso)
+import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianByIdUseCase.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
 
 final sl = GetIt.instance;
 
@@ -114,5 +124,32 @@ Future<void> setupLocator() async {
   sl.registerFactory(() => ProviderHomeProvider(
     getEquipmentsUseCase: sl(), // (Necesita esto para el conteo)
     getAvailableServiceRequestsUseCase: sl(), // (Necesita esto para el conteo)
+  ));
+
+
+  // --- Technician Stack ---
+
+  // D. DataSources
+  sl.registerLazySingleton<TechnicianRemoteDataSource>(
+        () => TechnicianRemoteDataSourceImpl(client: sl(), prefs: sl()),
+  );
+
+  // C. Repositories
+  sl.registerLazySingleton<TechnicianRepository>(
+        () => TechnicianRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // B. UseCases
+  sl.registerLazySingleton(() => GetTechniciansUseCase(sl()));
+  sl.registerLazySingleton(() => CreateTechnicianUseCase(sl()));
+  sl.registerLazySingleton(() => GetTechnicianByIdUseCase(sl()));
+
+  // A. Providers
+  sl.registerFactory(() => TechnicianProvider(
+    getTechniciansUseCase: sl(),
+    createTechnicianUseCase: sl(),
+  ));
+  sl.registerFactory(() => TechnicianDetailProvider( // (El del detalle)
+    getTechnicianByIdUseCase: sl(),
   ));
 }
