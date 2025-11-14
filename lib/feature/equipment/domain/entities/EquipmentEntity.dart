@@ -24,6 +24,7 @@ class EquipmentEntity extends Equatable {
   final String refrigerant = "R-134a"; // (Valor Falso)
   final String ownershipType;
 
+
   const EquipmentEntity({
     required this.id,
     required this.name,
@@ -41,6 +42,7 @@ class EquipmentEntity extends Equatable {
     required this.technicalDetails,
     required this.notes,
     required this.ownershipType,
+
   });
 
   @override
@@ -54,12 +56,12 @@ class EquipmentEntity extends Equatable {
     currentTemperature,
     ownerId,
     locationName,
-    // --- ¡AÑADIDO! ---
     code,
     manufacturer,
     energyConsumptionCurrent,
     technicalDetails,
     notes,
     ownershipType,
+
   ];
 }
