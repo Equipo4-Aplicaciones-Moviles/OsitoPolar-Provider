@@ -16,6 +16,12 @@ class ServerFailure extends Failure {
   const ServerFailure({String? message}) : super(message: message);
 }
 
+class NetworkFailure extends Failure {
+  final String message;
+
+  NetworkFailure(this.message); // Tu provider usa 'failure.message'
+}
+
 /// Falla de Caché (SharedPreferences, etc.)
 class CacheFailure extends Failure {
   const CacheFailure({String? message}) : super(message: message);

@@ -5,6 +5,7 @@ import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateReg
 import 'package:osito_polar_app/feature/authentication/domain/usecases/CompleteRegistrationUseCase.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 // Estados para CADA paso del flujo
 enum RegisterState {
   initial, // (El formulario)
@@ -32,7 +33,6 @@ class RegisterProvider extends ChangeNotifier {
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  // --- ¡NUEVO! Estado temporal para guardar los datos ---
   Map<String, dynamic> _formData = {};
   String? _sessionId;
   RegistrationCheckoutEntity? _checkoutEntity;
@@ -41,13 +41,15 @@ class RegisterProvider extends ChangeNotifier {
   static const _kFormDataKey = 'temp_reg_form_data';
   static const _kSessionIdKey = 'temp_reg_session_id';
 
+  // --- ¡SOLUCIÓN 1: SEGURO PARA DOBLE LLAMADA! ---
+  bool _isCompleting = false;
+
   /// PASO 1: Llamado desde 'ProviderRegisterPage'
   Future<void> createCheckout(
       Map<String, dynamic> formData,
       CheckoutParams checkoutParams,
       ) async {
     _state = RegisterState.creatingCheckout;
-    // ¡Guardamos los datos del formulario!
     _formData = formData;
     notifyListeners();
 
@@ -72,48 +74,51 @@ class RegisterProvider extends ChangeNotifier {
       },
           (checkout) {
         _checkoutEntity = checkout;
-        // ¡Guardamos el sessionId!
         prefs.setString(_kSessionIdKey, checkout.sessionId);
         _state = RegisterState.checkoutCreated;
-        //_sessionId = checkout.sessionId;
-        //_state = RegisterState.checkoutCreated;
       },
     );
     notifyListeners();
-
   }
 
   /// PASO 2: Llamado desde 'RegistrationSuccessPage'
   Future<void> completeRegistration(String sessionIdFromUrl) async {
+
+    // --- ¡AQUÍ ESTÁ LA SOLUCIÓN AL DOBLE USUARIO! ---
+    // Si ya estamos completando o ya terminamos, ignora esta segunda llamada.
+    if (_isCompleting || _state == RegisterState.registrationComplete) {
+      print("¡IGNORANDO LLAMADA DOBLE a completeRegistration!");
+      return;
+    }
+    // ¡Activamos el seguro!
+    _isCompleting = true;
+    // --------------------------------------------------
 
     final formDataString = prefs.getString(_kFormDataKey);
     final savedSessionId = prefs.getString(_kSessionIdKey);
 
 
     if (formDataString == null || formDataString.isEmpty || savedSessionId == null) {
-      // ¡ESTE ES EL ERROR QUE ESTÁS VIENDO!
       _errorMessage = "Error: No se encontraron datos de registro. Intenta de nuevo.";
       _state = RegisterState.error;
+      _isCompleting = false; // <-- Resetea el seguro
       notifyListeners();
       return;
     }
 
-    // (Opcional) Comprobar que el ID de sesión de la URL coincida con el guardado
     if (sessionIdFromUrl != savedSessionId) {
       _errorMessage = "Error: El ID de sesión no coincide. Intenta el proceso de nuevo.";
       _state = RegisterState.error;
+      _isCompleting = false; // <-- Resetea el seguro
       notifyListeners();
       return;
     }
 
-    // ¡Decodificamos los datos!
     final formDataMap = jsonDecode(formDataString) as Map<String, dynamic>;
-    // -----------------------------
 
     _state = RegisterState.completingRegistration;
     notifyListeners();
 
-    // Creamos los Params para el UseCase
     final params = CompleteRegistrationParams(
       sessionId: sessionIdFromUrl,
       username: formDataMap['username'],
@@ -135,20 +140,19 @@ class RegisterProvider extends ChangeNotifier {
           (failure) {
         _errorMessage = _mapFailureToMessage(failure);
         _state = RegisterState.error;
-        // No limpiamos los datos, para que puedan reintentar
+        _isCompleting = false; // <-- Resetea el seguro
       },
           (success) {
         _state = RegisterState.registrationComplete;
         _clearRegistrationData(); // ¡Éxito! Limpiamos los datos temporales
+        // (No reseteamos _isCompleting, ya que el flujo terminó)
       },
     );
     notifyListeners();
   }
 
-  // Limpia los datos temporales
   void _clearRegistrationData() {
     _checkoutEntity = null;
-    // --- ¡LIMPIAR SHARED PREFS! ---
     prefs.remove(_kFormDataKey);
     prefs.remove(_kSessionIdKey);
   }
@@ -156,13 +160,17 @@ class RegisterProvider extends ChangeNotifier {
   void resetState() {
     _state = RegisterState.initial;
     _errorMessage = '';
-    _clearRegistrationData(); // Asegura que todo esté limpio al resetear
+    _clearRegistrationData();
+    _isCompleting = false; // <-- ¡Asegúrate de resetear el seguro aquí también!
     notifyListeners();
   }
 
   String _mapFailureToMessage(Failure failure) {
     if (failure is ServerFailure) {
       return 'Error del servidor. Revisa los campos.';
+    }
+    if (failure is NetworkFailure) {
+      return 'Error de red: ${failure.message}';
     }
     return 'Un error inesperado ocurrió.';
   }

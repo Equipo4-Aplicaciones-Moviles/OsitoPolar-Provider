@@ -3,13 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
 
 class ProviderRegistrationSuccessPage extends StatefulWidget {
-  // --- ¡AQUÍ ESTÁ LA CLAVE! ---
   // Este es el parámetro que 'main.dart' espera
   final String? sessionId;
 
   const ProviderRegistrationSuccessPage({
     super.key,
-    required this.sessionId, // <-- 'main.dart' ya no dará error
+    required this.sessionId,
   });
 
   @override
@@ -20,48 +19,49 @@ class ProviderRegistrationSuccessPage extends StatefulWidget {
 class _ProviderRegistrationSuccessPageState
     extends State<ProviderRegistrationSuccessPage> {
 
-  bool _didCallProvider = false;
-
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Llama al provider solo una vez cuando la página se construye
-    if (!_didCallProvider) {
-      _didCallProvider = true;
+  void initState() {
+    super.initState();
+
+    // --- ¡SOLUCIÓN 2: "setState during build"! ---
+    // Llama a la función DESPUÉS de que el primer frame se construya.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _completeRegistration();
-    }
+    });
   }
 
   Future<void> _completeRegistration() async {
-    // Lee el provider
+    // Lee el provider (usa 'read' porque estamos en una función)
     final provider = context.read<RegisterProvider>();
 
     if (widget.sessionId == null) {
-      // Si no hay ID, marca un error (no debería pasar)
-      // (Tu provider ya maneja esto, pero podemos forzarlo)
-      print("Error: No se recibió sessionId en la página de éxito.");
-      await provider.completeRegistration("INVALID_SESSION_ID"); // Llama para forzar el error
+      print("Página de Éxito: No se recibió sessionId. Mostrando error.");
+      // Llama a la función con un ID inválido para forzar el estado de error
+      await provider.completeRegistration("INVALID_SESSION_ID_FROM_UI");
       return;
     }
 
-    // --- ¡AQUÍ ES DONDE LLAMAS AL PASO 2! ---
-    // Tu RegisterProvider (que ya está perfecto)
-    // será llamado con el ID de la URL.
-    print("Página de Éxito: Llamando a completeRegistration...");
-    await provider.completeRegistration(widget.sessionId!);
+    try {
+      // --- ¡ESTA ES LA LLAMADA REAL A TU LÓGICA! ---
+      print("Página de Éxito: Llamando a completeRegistration con ${widget.sessionId}");
+      await provider.completeRegistration(widget.sessionId!);
+
+    } catch (e) {
+      // El provider ya maneja los errores, pero por si acaso.
+      print("Error inesperado en _completeRegistration: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Observa los cambios del provider
+    // --- ¡ESCUCHA LOS CAMBIOS DEL PROVIDER AQUÍ! ---
     final providerState = context.watch<RegisterProvider>().state;
     final errorMessage = context.watch<RegisterProvider>().errorMessage;
 
-    // Maneja la navegación si el estado cambia a completo
-    // Usamos un 'listener' para la navegación
+    // --- MANEJA LA NAVEGACIÓN BASADO EN EL ESTADO ---
+    // Usamos un 'listener' para la navegación (es más seguro que hacerlo en 'build')
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (providerState == RegisterState.registrationComplete) {
-        // ¡Éxito! Saca al usuario de aquí (ej. al login)
         print("¡Registro completo! Navegando a login.");
         Navigator.of(context).pushNamedAndRemoveUntil('/provider_login', (route) => false);
       }
@@ -69,6 +69,7 @@ class _ProviderRegistrationSuccessPageState
 
     return Scaffold(
       body: Center(
+        // Muestra un spinner mientras el estado sea 'completando' o 'inicial'
         child: (providerState == RegisterState.completingRegistration || providerState == RegisterState.initial)
             ? const Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -79,7 +80,7 @@ class _ProviderRegistrationSuccessPageState
           ],
         )
             : Padding(
-          // Esto se muestra si state == RegisterState.error
+          // Muestra el error si el estado es 'error'
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -93,7 +94,7 @@ class _ProviderRegistrationSuccessPageState
               ),
               const SizedBox(height: 10),
               Text(
-                errorMessage,
+                errorMessage, // <-- Muestra el error real del provider
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
