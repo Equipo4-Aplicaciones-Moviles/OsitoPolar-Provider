@@ -52,7 +52,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     super.dispose();
   }
 
-  // --- (Tu lógica de '_buildSteps' y '_submitRegistration' no cambia) ---
+  // --- (Tu lógica de '_buildSteps' no cambia) ---
   List<Step> _buildSteps(BuildContext context, RegisterState state) {
     bool isLoading = (state == RegisterState.creatingCheckout ||
         state == RegisterState.completingRegistration);
@@ -60,7 +60,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     return [
       // --- PASO 1: DATOS DE CUENTA ---
       Step(
-        // --- ¡COLOR APLICADO! ---
         title: const Text(
           'Cuenta',
           style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
@@ -86,7 +85,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       ),
       // --- PASO 2: DATOS DE EMPRESA ---
       Step(
-        // --- ¡COLOR APLICADO! ---
         title: const Text(
           'Empresa',
           style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
@@ -123,7 +121,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       ),
       // --- PASO 3: DIRECCIÓN DE FACTURACIÓN ---
       Step(
-        // --- ¡COLOR APLICADO! ---
         title: const Text(
           'Dirección',
           style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
@@ -167,8 +164,8 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     ];
   }
 
+  // --- (Tu lógica de '_submitRegistration' no cambia) ---
   void _submitRegistration() {
-    // ... (Tu lógica no cambia)
     final provider = context.read<RegisterProvider>();
     if (provider.state == RegisterState.creatingCheckout) return;
 
@@ -189,16 +186,16 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     final checkoutParams = CheckoutParams(
       planId: 4,
       userType: "Provider",
-      successUrl: "http://localhost:3000/#/registration/success",
-      cancelUrl: "http://localhost:3000/#/registration/cancel",
+      successUrl: "https://ositopolar-42d82.web.app/registration/success",
+      cancelUrl: "https://ositopolar-42d82.web.app/registration/cancel",
     );
 
     print("Iniciando Paso 1: Creando checkout...");
     provider.createCheckout(formData, checkoutParams);
   }
 
+  // --- (Tu lógica de '_launchStripeCheckout' no cambia) ---
   Future<void> _launchStripeCheckout(String url) async {
-    // ... (Tu lógica no cambia)
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, webOnlyWindowName: '_self');
@@ -216,7 +213,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     final isLoading = (state == RegisterState.creatingCheckout ||
         state == RegisterState.completingRegistration);
 
-    // ... (Tu 'WidgetsBinding' no cambia)
+    // --- (Tu 'WidgetsBinding' no cambia) ---
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state == RegisterState.checkoutCreated) {
         final url = provider.checkoutEntity?.checkoutUrl;
@@ -228,7 +225,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight, // OK
+      backgroundColor: AppColors.backgroundLight,
       appBar: OsitoPolarTopBar(
         onMenuClicked: () {
           // TODO: Implementar lógica del drawer
@@ -241,10 +238,10 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
               padding: const EdgeInsets.all(24.0),
               child: Card(
                 elevation: 0,
-                color: AppColors.cardBackground, // OK
+                color: AppColors.cardBackground,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.0),
-                  side: const BorderSide(color: AppColors.cardBorder, width: 1), // OK
+                  side: const BorderSide(color: AppColors.cardBorder, width: 1),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -257,7 +254,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                         'Crear Cuenta de Proveedor',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.title, // OK
+                          color: AppColors.title,
                           fontWeight: FontWeight.bold,
                           fontSize: 28,
                           fontFamily: 'Inter',
@@ -266,9 +263,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                       const SizedBox(height: 32.0),
 
                       // --- WIZARD (STEPPER) ---
-                      // --- ¡COLOR APLICADO! ---
-                      // Envolvemos el Stepper en un Theme para que use
-                      // AppColors.primaryButton como su color principal.
                       Theme(
                         data: Theme.of(context).copyWith(
                           colorScheme: Theme.of(context).colorScheme.copyWith(
@@ -293,6 +287,10 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                             }
                           },
                           steps: _buildSteps(context, state),
+
+                          // ===============================================
+                          // == INICIO DE LA CORRECCIÓN 1 (SPINNER) ==
+                          // ===============================================
                           controlsBuilder: (context, details) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 16.0),
@@ -306,14 +304,14 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                                       child: Text(
                                         provider.errorMessage,
                                         textAlign: TextAlign.center,
-                                        // --- ¡COLOR APLICADO! ---
-                                        style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
+                                        style: const TextStyle(
+                                            color: Colors.red,
+                                            fontFamily: 'Inter'),
                                       ),
                                     ),
 
-                                  // --- Muestra el Loading ---
+                                  // --- Muestra el Loading (¡ESTE FALTABA!) ---
                                   if (isLoading)
-                                  // --- ¡COLOR APLICADO! ---
                                     const Center(
                                         child: CircularProgressIndicator(
                                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -322,27 +320,27 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
                                   // --- Muestra los Botones ---
                                   if (!isLoading)
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
+                                    Wrap(
+                                      alignment: WrapAlignment.end,
+                                      spacing: 12.0,
+                                      runSpacing: 8.0,
                                       children: [
                                         if (_currentStep > 0)
                                           TextButton(
                                             onPressed: details.onStepCancel,
-                                            // --- ¡COLOR APLICADO! ---
                                             child: const Text(
                                               'Atrás',
                                               style: TextStyle(
                                                   color: AppColors.textLink),
                                             ),
                                           ),
-                                        const SizedBox(width: 12),
                                         ElevatedButton(
                                           onPressed: details.onStepContinue,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
-                                            AppColors.primaryButton, // OK
+                                            AppColors.primaryButton,
                                             foregroundColor:
-                                            AppColors.buttonLabel, // OK
+                                            AppColors.buttonLabel,
                                           ),
                                           child: Text(
                                             _currentStep == 2
@@ -356,17 +354,25 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                               ),
                             );
                           },
+                          // ===============================================
+                          // == FIN DE LA CORRECCIÓN 1 ==
+                          // ===============================================
                         ),
                       ),
 
                       const SizedBox(height: 32.0),
-                      // --- ENLACE A "SIGN IN" ---
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+
+                      // ===============================================
+                      // == INICIO DE LA CORRECCIÓN 2 (LOGIN OVERFLOW) ==
+                      // ===============================================
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 4.0,
                         children: [
                           const Text(
                             "Already have an account?",
-                            style: TextStyle(color: AppColors.textColor), // OK
+                            style: TextStyle(color: AppColors.textColor),
                           ),
                           TextButton(
                             onPressed:
@@ -374,12 +380,15 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                             child: const Text(
                               'Login',
                               style: TextStyle(
-                                  color: AppColors.textLink, // OK
+                                  color: AppColors.textLink,
                                   fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
                       )
+                      // ===============================================
+                      // == FIN DE LA CORRECCIÓN 2 ==
+                      // ===============================================
                     ],
                   ),
                 ),
@@ -391,7 +400,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     );
   }
 
-  /// Helper para campos de texto
+  /// Helper para campos de texto (no cambia)
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
@@ -404,23 +413,23 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
-        fillColor: AppColors.textFieldBackground, // OK
+        fillColor: AppColors.textFieldBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide:
-          const BorderSide(color: AppColors.textFieldBorder, width: 1), // OK
+          const BorderSide(color: AppColors.textFieldBorder, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide:
-          const BorderSide(color: AppColors.textFieldBorder, width: 1), // OK
+          const BorderSide(color: AppColors.textFieldBorder, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide:
-          const BorderSide(color: AppColors.primaryButton, width: 2), // OK
+          const BorderSide(color: AppColors.primaryButton, width: 2),
         ),
-        labelStyle: const TextStyle(color: AppColors.textColor), // OK
+        labelStyle: const TextStyle(color: AppColors.textColor),
       ),
       keyboardType: keyboardType,
     );
