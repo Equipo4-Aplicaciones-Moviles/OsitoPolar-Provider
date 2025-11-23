@@ -37,13 +37,10 @@ import 'package:osito_polar_app/feature/service_request/data/repositories/Servic
 import 'package:osito_polar_app/feature/service_request/domain/repositories/ServiceRequestRepository.dart';
 import 'package:osito_polar_app/feature/service_request/domain/usecases/GetAvailableServiceRequestsUseCase.dart';
 import 'package:osito_polar_app/feature/service_request/domain/usecases/AcceptServiceRequestUseCase.dart';
-// ¡NUEVO PROVIDER DE MARKETPLACE!
+
 import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 
-// --- PROVIDER DASHBOARD (HOME) IMPORTS ---
-// ¡EL PROVIDER DEL DASHBOARD/RESUMEN!
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
-//TECHNICIAN IMPORTS
 
 import 'package:osito_polar_app/feature/technician/domain/repositories/TechnicianRepository.dart';
 import 'package:osito_polar_app/feature/technician/data/repositories/TechnicianRepositoryImpl.dart';
@@ -60,15 +57,14 @@ final sl = GetIt.instance;
 Future<void> setupLocator() async {
   await sl.reset();
 
-  // --- PASO 1: CORE/EXTERNAL ---
+  // --- CORE ---
   sl.registerLazySingleton(() => http.Client());
   final prefs = await SharedPreferences.getInstance();
   sl.registerLazySingleton<SharedPreferences>(() => prefs);
 
-  // --- PASO 2: FEATURES ---
+  // FEATURES ---
 
   // --- Authentication ---
-  // (Sin cambios)
   sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(client: sl()));
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton(() => SignInUseCase(sl()));
@@ -99,7 +95,7 @@ Future<void> setupLocator() async {
   ));
   sl.registerFactory(() => EquipmentDetailProvider(getEquipmentByIdUseCase: sl()));
 
-  // ¡NUEVO PROVIDER DE EQUIPMENT (para la pág. Mis Equipos)!
+
   sl.registerFactory(() => EquipmentProvider(
     getEquipmentsUseCase: sl(),
     deleteEquipmentUseCase: sl(),
@@ -113,7 +109,7 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => GetAvailableServiceRequestsUseCase(sl()));
   sl.registerLazySingleton(() => AcceptServiceRequestUseCase(sl()));
 
-  // ¡NUEVO PROVIDER DE MARKETPLACE (para la pág. Marketplace)!
+
   sl.registerFactory(() => MarketplaceProvider(
     getAvailableServiceRequestsUseCase: sl(),
     acceptServiceRequestUseCase: sl(),
@@ -122,8 +118,8 @@ Future<void> setupLocator() async {
   // --- ProviderHome Stack (Dashboard/Resumen) ---
   // ¡EL PROVIDER DEL DASHBOARD!
   sl.registerFactory(() => ProviderHomeProvider(
-    getEquipmentsUseCase: sl(), // (Necesita esto para el conteo)
-    getAvailableServiceRequestsUseCase: sl(), // (Necesita esto para el conteo)
+    getEquipmentsUseCase: sl(),
+    getAvailableServiceRequestsUseCase: sl(),
   ));
 
 

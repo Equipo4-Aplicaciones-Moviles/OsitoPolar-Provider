@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
 
 class ProviderRegistrationSuccessPage extends StatefulWidget {
-  // Este es el parámetro que 'main.dart' espera
+
   final String? sessionId;
 
   const ProviderRegistrationSuccessPage({
@@ -23,43 +23,41 @@ class _ProviderRegistrationSuccessPageState
   void initState() {
     super.initState();
 
-    // --- ¡SOLUCIÓN 2: "setState during build"! ---
-    // Llama a la función DESPUÉS de que el primer frame se construya.
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _completeRegistration();
     });
   }
 
   Future<void> _completeRegistration() async {
-    // Lee el provider (usa 'read' porque estamos en una función)
+
     final provider = context.read<RegisterProvider>();
 
     if (widget.sessionId == null) {
       print("Página de Éxito: No se recibió sessionId. Mostrando error.");
-      // Llama a la función con un ID inválido para forzar el estado de error
+
       await provider.completeRegistration("INVALID_SESSION_ID_FROM_UI");
       return;
     }
 
     try {
-      // --- ¡ESTA ES LA LLAMADA REAL A TU LÓGICA! ---
+
       print("Página de Éxito: Llamando a completeRegistration con ${widget.sessionId}");
       await provider.completeRegistration(widget.sessionId!);
 
     } catch (e) {
-      // El provider ya maneja los errores, pero por si acaso.
+
       print("Error inesperado en _completeRegistration: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- ¡ESCUCHA LOS CAMBIOS DEL PROVIDER AQUÍ! ---
+
     final providerState = context.watch<RegisterProvider>().state;
     final errorMessage = context.watch<RegisterProvider>().errorMessage;
 
-    // --- MANEJA LA NAVEGACIÓN BASADO EN EL ESTADO ---
-    // Usamos un 'listener' para la navegación (es más seguro que hacerlo en 'build')
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (providerState == RegisterState.registrationComplete) {
         print("¡Registro completo! Navegando a login.");
@@ -69,7 +67,7 @@ class _ProviderRegistrationSuccessPageState
 
     return Scaffold(
       body: Center(
-        // Muestra un spinner mientras el estado sea 'completando' o 'inicial'
+
         child: (providerState == RegisterState.completingRegistration || providerState == RegisterState.initial)
             ? const Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -80,7 +78,7 @@ class _ProviderRegistrationSuccessPageState
           ],
         )
             : Padding(
-          // Muestra el error si el estado es 'error'
+
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -94,13 +92,13 @@ class _ProviderRegistrationSuccessPageState
               ),
               const SizedBox(height: 10),
               Text(
-                errorMessage, // <-- Muestra el error real del provider
+                errorMessage,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // Limpia el estado y navega de vuelta al registro para reintentar
+
                   context.read<RegisterProvider>().resetState();
                   Navigator.of(context).pushNamedAndRemoveUntil('/provider_register', (route) => false);
                 },

@@ -15,7 +15,6 @@ class MyEquipmentPage extends StatefulWidget {
 class _MyEquipmentPageState extends State<MyEquipmentPage> {
   bool _isProcessing = false;
 
-  // 🔵 Nueva función universal para mostrar mensajes sin plugins
   void showAppMessage(String msg, bool success) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -367,9 +366,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // ======================================================
-  //                   DIÁLOGOS DE ACCIONES
-  // ======================================================
+
 
   void _showDeleteDialog(
       BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
