@@ -25,15 +25,12 @@ class ProfileCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
-          // CAMBIO: Fondo blanco para que resalte sobre el azul de la pantalla
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          // RESTAURADO: El borde azul indica cuál "login" está seleccionado
           border: Border.all(
             color: isSelected ? AppColors.primaryButton : Colors.transparent,
             width: isSelected ? 3 : 0,
           ),
-          // Opcional: Sombra suave para darle profundidad como en diseños modernos
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -52,8 +49,8 @@ class ProfileCard extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 24, // Tamaño grande
-                    fontWeight: FontWeight.w900, // Extra negrita
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
                     color: AppColors.textBlack,
                     height: 1.1,
                   ),
@@ -61,7 +58,6 @@ class ProfileCard extends StatelessWidget {
                 Icon(
                   icon,
                   size: 38,
-                  // El ícono se pone azul si está seleccionado, negro si no
                   color: isSelected ? AppColors.primaryButton : AppColors.textBlack,
                 ),
               ],

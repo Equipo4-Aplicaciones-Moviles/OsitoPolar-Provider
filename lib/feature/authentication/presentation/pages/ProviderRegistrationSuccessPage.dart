@@ -4,16 +4,20 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/routing/app_route.dart';
 
 class ProviderRegistrationSuccessPage extends StatelessWidget {
-  // --- AGREGAMOS ESTO PARA QUE MAIN.DART NO DE ERROR ---
   final String? sessionId;
 
-  // Datos hardcodeados para el diseño visual
-  final String username = "Oliver";
-  final String password = "\$ywrKXKT!JD*Mcos";
+  // ---------------------------------------------------------
+  // LÓGICA AGREGADA: Variables finales (sin datos fijos)
+  // ---------------------------------------------------------
+  final String username;
+  final String password;
 
   const ProviderRegistrationSuccessPage({
     super.key,
-    this.sessionId, // <--- Agregado al constructor
+    this.sessionId,
+    // LÓGICA AGREGADA: Pedimos los datos obligatoriamente
+    required this.username,
+    required this.password,
   });
 
   @override
@@ -21,10 +25,10 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // CAPA 1: Fondo Blanco
+          // Capa 1: Fondo Blanco
           Container(color: Colors.white),
 
-          // CAPA 2: Degradado
+          // Capa 2: Degradado
           Opacity(
             opacity: 0.3,
             child: Container(
@@ -34,14 +38,14 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     AppColors.onboardingGradientStart,
-                    AppColors.onboardingGradientEnd,
+                    AppColors.onboardingGradientEnd
                   ],
                 ),
               ),
             ),
           ),
 
-          // CAPA 3: Contenido
+          // Capa 3: Contenido
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -49,8 +53,7 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
-                    // ICONO CHECK
+                    // Icono Check
                     Container(
                       width: 80,
                       height: 80,
@@ -58,16 +61,11 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                         color: AppColors.primaryButton,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 50,
-                        weight: 10,
-                      ),
+                      child: const Icon(Icons.check, color: Colors.white, size: 50, weight: 10),
                     ),
                     const SizedBox(height: 24),
 
-                    // TÍTULO
+                    // Título
                     const Text(
                       '¡Tu cuenta ha sido creada !',
                       textAlign: TextAlign.center,
@@ -80,7 +78,7 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // TARJETA ADVERTENCIA
+                    // Tarjeta Advertencia (Rojo suave)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -104,10 +102,9 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 20),
 
-                    // TARJETA CREDENCIALES
+                    // Tarjeta Credenciales (Gris azulado)
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -127,31 +124,22 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
 
-                          _buildCredentialRow(
-                              context,
-                              icon: Icons.person,
-                              label: 'Usuario',
-                              value: username
-                          ),
+                          // Usamos la variable 'username' real
+                          _buildCredentialRow(context, icon: Icons.person, label: 'Usuario', value: username),
 
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12.0),
                             child: Divider(color: Colors.black12, thickness: 1),
                           ),
 
-                          _buildCredentialRow(
-                              context,
-                              icon: Icons.lock,
-                              label: 'Contraseña',
-                              value: password
-                          ),
+                          // Usamos la variable 'password' real
+                          _buildCredentialRow(context, icon: Icons.lock, label: 'Contraseña', value: password),
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 20),
 
-                    // TARJETA PRÓXIMOS PASOS
+                    // Tarjeta Próximos Pasos (Lila suave)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -168,10 +156,7 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            '1. Guarda estas credenciales en un lugar seguro.\n'
-                                '2. Inicia sesión con tu usuario y contraseña\n'
-                                '3. Configura la autenticación de dos factores (2FA)\n'
-                                '4. Comienza a gestionar tus equipos',
+                            '1. Guarda estas credenciales en un lugar seguro.\n2. Inicia sesión con tu usuario y contraseña\n3. Configura la autenticación de dos factores (2FA)\n4. Comienza a gestionar tus equipos',
                             style: TextStyle(
                               fontSize: 14,
                               color: Color(0xFF4A4A4A),
@@ -181,20 +166,18 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 30),
 
-                    // BOTÓN LOGIN
+                    // Botón Login
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Navegar al Login y limpiar historial
                           Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              AppRoute.providerLogin,
-                                  (route) => false
+                            context,
+                            AppRoute.providerLogin,
+                                (route) => false,
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -207,17 +190,13 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                         ),
                         child: const Text(
                           'Login',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 20),
 
-                    // FOOTER
+                    // Footer
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -226,7 +205,7 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
                           style: TextStyle(color: Color(0xFF667085), fontSize: 14),
                         ),
                         GestureDetector(
-                          onTap: () {}, // Ya estamos registrados
+                          onTap: () {},
                           child: const Text(
                             'Registrate',
                             style: TextStyle(
@@ -258,13 +237,7 @@ class ProviderRegistrationSuccessPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF667085),
-                ),
-              ),
+              Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF667085))),
               Text(
                 value,
                 style: const TextStyle(

@@ -28,21 +28,18 @@ class _SelectProfileScreenState extends State<SelectProfileScreen> {
     }
 
     return Scaffold(
-      // Quitamos el color sólido del Scaffold para usar el degradado
       body: Container(
-        // --- AQUÍ ESTÁ LA CLAVE: EL MISMO DEGRADADO QUE LA PANTALLA DEL OSO ---
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.onboardingGradientStart, // Azul más fuerte arriba
-              AppColors.onboardingGradientEnd,   // Azul más claro abajo
+              AppColors.onboardingGradientStart,
+              AppColors.onboardingGradientEnd,
             ],
-            stops: [0.1, 0.7], // Mismos puntos de quiebre
+            stops: [0.1, 0.7],
           ),
         ),
-        // ----------------------------------------------------------------------
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20.0),

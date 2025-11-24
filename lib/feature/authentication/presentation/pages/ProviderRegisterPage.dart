@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-// Importamos la página de éxito para poder navegar a ella
+// Asegúrate de que la ruta de importación sea la correcta según tu proyecto
 import 'ProviderRegistrationSuccessPage.dart';
 
 class ProviderRegisterPage extends StatefulWidget {
@@ -16,16 +16,21 @@ class ProviderRegisterPage extends StatefulWidget {
 }
 
 class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
-  // Control de pasos (1 o 2)
+  // --- ESTADO ---
   int _currentStep = 1;
+  bool _isLoading = false;
 
-  // Controladores Paso 1
+  // Llaves para validar formularios
+  final _step1FormKey = GlobalKey<FormState>();
+  final _step2FormKey = GlobalKey<FormState>();
+
+  // --- CONTROLADORES PASO 1 ---
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _companyNameController = TextEditingController();
 
-  // Controladores Paso 2
+  // --- CONTROLADORES PASO 2 ---
   final TextEditingController _streetController = TextEditingController();
   final TextEditingController _numberController = TextEditingController();
   final TextEditingController _zipCodeController = TextEditingController();
@@ -33,27 +38,76 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
   final TextEditingController _countryController = TextEditingController();
 
   @override
+  void dispose() {
+    // Limpieza de controladores
+    _nameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _companyNameController.dispose();
+    _streetController.dispose();
+    _numberController.dispose();
+    _zipCodeController.dispose();
+    _cityController.dispose();
+    _countryController.dispose();
+    super.dispose();
+  }
+
+  // --- LÓGICA DE NAVEGACIÓN ---
+
+  void _onNextPressed() {
+    // Validamos el paso 1 antes de avanzar
+    if (_step1FormKey.currentState!.validate()) {
+      setState(() {
+        _currentStep = 2;
+      });
+    }
+  }
+
+  Future<void> _onSubmitPressed() async {
+    // Validamos el paso 2 antes de enviar
+    if (_step2FormKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      // Simulación de llamada a API (2 segundos)
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Generamos una contraseña temporal simulada
+      // (En una app real, esto vendría del backend o se enviaría por email)
+      final tempPassword = "Prov-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}";
+      final tempUsername = _emailController.text.isNotEmpty
+          ? _emailController.text
+          : _nameController.text;
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        // AQUÍ ESTÁ LA CORRECCIÓN: Pasamos los argumentos requeridos
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProviderRegistrationSuccessPage(
+              username: tempUsername,  // Pasamos el email o nombre
+              password: tempPassword,  // Pasamos la contraseña generada
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true, // Para que el teclado no tape
       body: Stack(
         children: [
-          // ---------------------------------------------------------
-          // CAPA 1: Fondo Blanco Base
-          // ---------------------------------------------------------
-          Container(
-            color: Colors.white,
-            height: double.infinity,
-            width: double.infinity,
-          ),
+          // CAPA 1: Fondo Blanco
+          Container(color: Colors.white),
 
-          // ---------------------------------------------------------
-          // CAPA 2: Degradado "Linear" al 30% de opacidad
-          // ---------------------------------------------------------
+          // CAPA 2: Degradado con Opacidad
           Opacity(
             opacity: 0.3,
             child: Container(
-              height: double.infinity,
-              width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -67,9 +121,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
             ),
           ),
 
-          // ---------------------------------------------------------
           // CAPA 3: Contenido
-          // ---------------------------------------------------------
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -77,8 +129,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
-                    // TÍTULO
                     const Text(
                       'Crea una cuenta',
                       textAlign: TextAlign.center,
@@ -91,17 +141,13 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                     ),
                     const SizedBox(height: 10),
 
-                    // LOGIN LINK
+                    // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text(
                           'Ya tienes una cuenta ',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF667085),
-                            fontWeight: FontWeight.w400,
-                          ),
+                          style: TextStyle(fontSize: 16, color: Color(0xFF667085)),
                         ),
                         GestureDetector(
                           onTap: widget.onSignInClicked ?? () => Navigator.pop(context),
@@ -110,7 +156,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                             style: TextStyle(
                               fontSize: 16,
                               color: AppColors.primaryButton,
-                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
@@ -119,50 +164,54 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
                     const SizedBox(height: 40),
 
-                    // --- STEPPER ---
+                    // Stepper Visual
                     _buildStepper(),
 
                     const SizedBox(height: 40),
 
-                    // --- CONTENIDO CAMBIANTE SEGÚN EL PASO ---
+                    // Formularios (Envueltos en Form para validación)
                     if (_currentStep == 1)
-                      _buildStep1Form()
+                      Form(
+                        key: _step1FormKey,
+                        child: _buildStep1Form(),
+                      )
                     else
-                      _buildStep2Form(),
+                      Form(
+                        key: _step2FormKey,
+                        child: _buildStep2Form(),
+                      ),
 
                     const SizedBox(height: 40),
 
-                    // --- BOTÓN DE ACCIÓN ---
+                    // Botón de Acción
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: _isLoading
+                            ? null // Deshabilita botón si está cargando
+                            : () {
                           if (_currentStep == 1) {
-                            // SI ESTOY EN PASO 1 -> IR A PASO 2
-                            setState(() {
-                              _currentStep = 2;
-                            });
+                            _onNextPressed();
                           } else {
-                            // SI ESTOY EN PASO 2 -> IR A PANTALLA DE ÉXITO
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ProviderRegistrationSuccessPage(),
-                              ),
-                            );
+                            _onSubmitPressed();
                           }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryButton,
                           foregroundColor: Colors.white,
-                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(100),
                           ),
                         ),
-                        child: Text(
-                          _currentStep == 1 ? 'Siguiente' : 'Login',
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                            : Text(
+                          _currentStep == 1 ? 'Siguiente' : 'Registrar',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -173,16 +222,13 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
                     const SizedBox(height: 30),
 
-                    // FOOTER
+                    // Footer
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text(
                           '¿No tienes cuenta? ',
-                          style: TextStyle(
-                            color: Color(0xFF667085),
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Color(0xFF667085), fontSize: 14),
                         ),
                         GestureDetector(
                           onTap: () {},
@@ -208,21 +254,15 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     );
   }
 
-  // --- STEPPER VISUAL ---
+  // --- WIDGETS AUXILIARES ---
+
   Widget _buildStepper() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // PASO 1
-          _buildStepItem(
-              text: 'Información Personal',
-              number: '1',
-              isActive: _currentStep >= 1
-          ),
-
-          // LÍNEA CONECTORA
+          _buildStepItem(text: 'Info Personal', number: '1', isActive: _currentStep >= 1),
           Expanded(
             child: Container(
               margin: const EdgeInsets.only(top: 40.0, left: 10.0, right: 10.0),
@@ -230,13 +270,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
               color: AppColors.primaryButton,
             ),
           ),
-
-          // PASO 2
-          _buildStepItem(
-              text: 'Dirección',
-              number: '2',
-              isActive: _currentStep >= 2
-          ),
+          _buildStepItem(text: 'Dirección', number: '2', isActive: _currentStep >= 2),
         ],
       ),
     );
@@ -251,13 +285,10 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
           child: Text(
             text,
             textAlign: TextAlign.center,
-            softWrap: false,
-            overflow: TextOverflow.visible,
             style: const TextStyle(
               fontSize: 12,
               color: AppColors.primaryButton,
               fontWeight: FontWeight.w500,
-              height: 1.2,
             ),
           ),
         ),
@@ -285,45 +316,62 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     );
   }
 
-  // --- FORMULARIO PASO 1 ---
+  // --- FORMULARIOS CON VALIDACIÓN ---
+
   Widget _buildStep1Form() {
     return Column(
       children: [
         Align(alignment: Alignment.centerLeft, child: _buildLabel('Nombres')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _nameController, hintText: 'Oliver09'),
-
+        _buildTextField(
+          controller: _nameController,
+          hintText: 'Ej. Oliver',
+          validator: (v) => v!.isEmpty ? 'Ingresa tu nombre' : null,
+        ),
         const SizedBox(height: 20),
-
         Align(alignment: Alignment.centerLeft, child: _buildLabel('Apellido')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _lastNameController, hintText: 'Oliver09'),
-
+        _buildTextField(
+          controller: _lastNameController,
+          hintText: 'Ej. Smith',
+          validator: (v) => v!.isEmpty ? 'Ingresa tu apellido' : null,
+        ),
         const SizedBox(height: 20),
-
         Align(alignment: Alignment.centerLeft, child: _buildLabel('Email')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _emailController, hintText: 'Oliver09'),
-
+        _buildTextField(
+          controller: _emailController,
+          hintText: 'ejemplo@correo.com',
+          keyboardType: TextInputType.emailAddress,
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Requerido';
+            if (!v.contains('@')) return 'Email inválido';
+            return null;
+          },
+        ),
         const SizedBox(height: 20),
-
-        Align(alignment: Alignment.centerLeft, child: _buildLabel('Nombre de Empresa')),
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Empresa')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _companyNameController, hintText: 'Oliver09'),
+        _buildTextField(
+          controller: _companyNameController,
+          hintText: 'Nombre de tu empresa',
+          validator: (v) => v!.isEmpty ? 'Requerido' : null,
+        ),
       ],
     );
   }
 
-  // --- FORMULARIO PASO 2 ---
   Widget _buildStep2Form() {
     return Column(
       children: [
         Align(alignment: Alignment.centerLeft, child: _buildLabel('Calle')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _streetController, hintText: 'Av. Saturno'),
-
+        _buildTextField(
+          controller: _streetController,
+          hintText: 'Av. Principal',
+          validator: (v) => v!.isEmpty ? 'Requerido' : null,
+        ),
         const SizedBox(height: 20),
-
         Row(
           children: [
             Expanded(
@@ -332,7 +380,12 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                 children: [
                   _buildLabel('Número'),
                   const SizedBox(height: 8),
-                  _buildTextField(controller: _numberController, hintText: '14'),
+                  _buildTextField(
+                    controller: _numberController,
+                    hintText: '123',
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                  ),
                 ],
               ),
             ),
@@ -341,26 +394,34 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLabel('Código postal'),
+                  _buildLabel('C. Postal'),
                   const SizedBox(height: 8),
-                  _buildTextField(controller: _zipCodeController, hintText: '15621'),
+                  _buildTextField(
+                    controller: _zipCodeController,
+                    hintText: '15001',
+                    keyboardType: TextInputType.number,
+                  ),
                 ],
               ),
             ),
           ],
         ),
-
         const SizedBox(height: 20),
-
         Align(alignment: Alignment.centerLeft, child: _buildLabel('Ciudad')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _cityController, hintText: 'Lima'),
-
+        _buildTextField(
+          controller: _cityController,
+          hintText: 'Lima',
+          validator: (v) => v!.isEmpty ? 'Requerido' : null,
+        ),
         const SizedBox(height: 20),
-
         Align(alignment: Alignment.centerLeft, child: _buildLabel('País')),
         const SizedBox(height: 8),
-        _buildTextField(controller: _countryController, hintText: 'Lima'),
+        _buildTextField(
+          controller: _countryController,
+          hintText: 'Perú',
+          validator: (v) => v!.isEmpty ? 'Requerido' : null,
+        ),
       ],
     );
   }
@@ -382,9 +443,13 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
       style: const TextStyle(
         fontWeight: FontWeight.w600,
         fontSize: 16,
@@ -392,13 +457,10 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       ),
       decoration: InputDecoration(
         filled: true,
-        fillColor: const Color(0xFFE1E7EF), // Gris azulado suave
+        fillColor: const Color(0xFFE1E7EF),
         hintText: hintText,
         hintStyle: const TextStyle(color: Colors.black38, fontSize: 15),
-
-        // Padding interno ajustado
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(100),
           borderSide: const BorderSide(color: Colors.transparent, width: 0),
@@ -406,6 +468,14 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(100),
           borderSide: const BorderSide(color: AppColors.primaryButton, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: Colors.red, width: 1.0),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
       ),
     );

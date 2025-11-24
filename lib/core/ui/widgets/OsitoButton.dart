@@ -30,18 +30,15 @@ class OsitoButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // --- CAMBIO AQUÍ ---
-            // Reemplazamos el Icon por Image.asset
+            // Logo del oso blanco (Asegúrate de tener el asset 'bear_logo_white.png')
             Image.asset(
-              'assets/images/bear_logo_white.png', // Asegúrate que este nombre coincida con tu archivo
-              height: 28, // Tamaño similar al ícono anterior
+              'assets/images/bear_logo_white.png',
+              height: 28,
               width: 28,
-              // Opcional: Si tu imagen no es blanca pura, esto la fuerza a ser blanca
               color: Colors.white,
+              errorBuilder: (c, e, s) => const Icon(Icons.catching_pokemon, color: Colors.white), // Fallback
             ),
-            // -------------------
 
-            // Texto Centrado
             Text(
               text,
               style: const TextStyle(
@@ -51,7 +48,6 @@ class OsitoButton extends StatelessWidget {
               ),
             ),
 
-            // Ícono derecho (Flecha)
             const Icon(Icons.arrow_forward_ios_rounded, size: 20),
           ],
         ),

@@ -1,15 +1,15 @@
 class AppRoute {
   // Rutas de Onboarding (Nuevas)
   static const String getStarted = '/get_started';
-  static const String selectProfile = '/select_profile_new'; // Nombre nuevo para diferenciar de la vieja
+  static const String selectProfile = '/select_profile_new';
 
-  // Rutas de Autenticación (Existentes en tu main)
+  // Rutas de Autenticación
   static const String clientLogin = '/client_login';
   static const String providerLogin = '/provider_login';
   static const String clientRegister = '/client_register';
   static const String providerRegister = '/provider_register';
 
-  // Rutas de Provider (Existentes)
+  // Rutas de Provider
   static const String providerHome = '/provider_home';
   static const String providerMyEquipments = '/provider_my_equipments';
   static const String providerMarketplace = '/provider_marketplace';

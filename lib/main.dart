@@ -124,7 +124,7 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: _navigatorKey,
       title: 'OsitoPolar App',
 
-      // --- AQUÍ QUITAMOS LA ETIQUETA ROJA ---
+      // --- CONFIGURACIÓN VISUAL ---
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(
@@ -170,14 +170,25 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
 
+      // --- RUTA INICIAL ---
       initialRoute: AppRoute.getStarted,
 
       onGenerateRoute: (settings) {
+        // ------------------------------------------------------------------
+        // CORRECCIÓN AQUÍ: Manejo del Deep Link pasando datos genéricos
+        // ------------------------------------------------------------------
         if (settings.name != null && settings.name!.startsWith('/registration/success')) {
           final Uri uri = Uri.parse(settings.name!);
           final String? sessionId = uri.queryParameters['session_id'];
+
           return MaterialPageRoute(
-            builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
+            builder: (context) => ProviderRegistrationSuccessPage(
+              sessionId: sessionId,
+              // Como venimos de un link externo, no tenemos los datos del form,
+              // así que ponemos un placeholder o indicamos que verifique su correo.
+              username: "Usuario Verificado",
+              password: "*** (Revisa tu correo) ***",
+            ),
           );
         }
 
@@ -212,9 +223,7 @@ class _MyAppState extends State<MyApp> {
 
           case AppRoute.providerRegister:
           case '/provider_register':
-            return MaterialPageRoute(builder: (context) => ProviderRegisterPage(
-              onSignInClicked: () => Navigator.pop(context),
-            ));
+            return MaterialPageRoute(builder: (context) => const ProviderRegisterPage());
 
           case AppRoute.providerHome:
           case '/provider_home':
