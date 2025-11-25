@@ -6,6 +6,8 @@ import 'package:osito_polar_app/feature/authentication/domain/usecases/CompleteR
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/entities/RegistrationCredentialsEntity.dart';
+
 
 enum RegisterState {
   initial,
@@ -43,6 +45,10 @@ class RegisterProvider extends ChangeNotifier {
 
 
   bool _isCompleting = false;
+  RegistrationCredentialsEntity? _credentials;
+
+  // 2. Getter para que la UI pueda leerla
+  RegistrationCredentialsEntity? get credentials => _credentials;
 
   /// Llamado desde 'ProviderRegisterPage'
   Future<void> createCheckout(
@@ -141,10 +147,10 @@ class RegisterProvider extends ChangeNotifier {
         _state = RegisterState.error;
         _isCompleting = false;
       },
-          (success) {
+          (credentialsEntity) {
+        _credentials = credentialsEntity; // <-- ¡Guardamos aquí!
         _state = RegisterState.registrationComplete;
         _clearRegistrationData();
-
       },
     );
     notifyListeners();

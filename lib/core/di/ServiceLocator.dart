@@ -51,6 +51,7 @@ import 'package:osito_polar_app/feature/technician/domain/usecases/CreateTechnic
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart'; // (Lo crearemos en el siguiente paso)
 import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianByIdUseCase.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
+import 'package:osito_polar_app/feature/service_request/domain/usecases/GetServiceRequestsUseCase.dart';
 
 final sl = GetIt.instance;
 
@@ -108,6 +109,7 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton<ServiceRequestRepository>(() => ServiceRequestRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton(() => GetAvailableServiceRequestsUseCase(sl()));
   sl.registerLazySingleton(() => AcceptServiceRequestUseCase(sl()));
+  sl.registerLazySingleton(() => GetServiceRequestsUseCase(sl()));
 
 
   sl.registerFactory(() => MarketplaceProvider(

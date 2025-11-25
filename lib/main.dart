@@ -1,49 +1,63 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Para SystemChrome
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'package:app_links/app_links.dart'; // Importante para el redirect
+
+// --- DI & THEME ---
 import 'package:osito_polar_app/core/di/ServiceLocator.dart';
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-import 'package:provider/provider.dart';
-import 'package:app_links/app_links.dart';
+import 'package:osito_polar_app/core/routing/app_route.dart'; // Asegúrate de tener este archivo de rutas
 
-// --- RUTAS ---
-import 'package:osito_polar_app/core/routing/app_route.dart';
-
-// --- Providers ---
+// --- PROVIDERS ---
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
+import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
+import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
-import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
-import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
-import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 
-// --- Páginas ---
+
+// --- PÁGINAS ---
+// Onboarding (Diseño Nuevo)
 import 'package:osito_polar_app/feature/onboarding/presentation/screens/GetStartedScreen.dart';
 import 'package:osito_polar_app/feature/onboarding/presentation/screens/SelectProfileScreen.dart';
 
+// Auth
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientRegisterPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegisterPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegistrationSuccessPage.dart';
-import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmentPage.dart';
-import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderEquipmentDetailPage.dart';
-import 'package:osito_polar_app/feature/technician/presentation/pages/ProviderClientsTechniciansPage.dart';
-import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
-import 'package:osito_polar_app/feature/technician/presentation/pages/TechniciansDetailPage.dart';
+
+// Provider Module
 import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderHomePage.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/pages/MyEquipmentPage.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmentPage.dart';
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderEquipmentDetailPage.dart';
 import 'package:osito_polar_app/feature/service_request/presentation/pages/MarketplacePage.dart';
+
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderClientAccountPage.dart';
+
+
+import 'feature/technician/presentation/pages/ProviderClientsTechniciansPage.dart';
+import 'feature/technician/presentation/pages/TechniciansDetailPage.dart';
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   await setupLocator();
+
+  // Configuración opcional de UI (Barra de estado transparente)
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+  ));
 
   runApp(
     MultiProvider(
@@ -57,6 +71,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => sl<MarketplaceProvider>()),
         ChangeNotifierProvider(create: (_) => sl<TechnicianProvider>()),
         ChangeNotifierProvider(create: (_) => sl<TechnicianDetailProvider>()),
+
       ],
       child: const MyApp(),
     ),
@@ -72,9 +87,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  final _appLinks = AppLinks();
+  late AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
-  String? _lastProcessedSessionId;
 
   @override
   void initState() {
@@ -88,32 +102,41 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
+  // --- CONFIGURACIÓN DE DEEP LINKS ---
   Future<void> _initAppLinks() async {
+    _appLinks = AppLinks();
+
+    // 1. Link Inicial (Si la app estaba cerrada y se abre por un link)
     try {
       final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
-        _handleLink(initialUri);
+        _handleDeepLink(initialUri);
       }
-      _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-        _handleLink(uri);
-      });
     } catch (e) {
-      print('Error al inicializar app_links: $e');
+      print('Error obteniendo link inicial: $e');
     }
+
+    // 2. Stream de Links (Si la app está en segundo plano)
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    });
   }
 
-  void _handleLink(Uri uri) {
-    if (uri.host == 'ositopolar-42d82.web.app' && uri.path == '/registration/success') {
-      final String? sessionId = uri.queryParameters['session_id'];
-      if (sessionId == null || sessionId.isEmpty) return;
-      if (sessionId == _lastProcessedSessionId) return;
+  void _handleDeepLink(Uri uri) {
+    print("🔗 Link Recibido: $uri");
 
-      _lastProcessedSessionId = sessionId;
-      final String fullPath = uri.path + (uri.hasQuery ? '?${uri.query}' : '');
+    // Buscamos el session_id en la URL
+    // Puede venir como query parameter (?session_id=...)
+    // Ojo: Dependiendo de tu config en Firebase, podría venir diferente.
+    final sessionId = uri.queryParameters['session_id'];
 
-      _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-        fullPath,
-            (route) => false,
+    if (sessionId != null) {
+      print("✅ Session ID encontrado: $sessionId");
+      // Navegamos a la pantalla de éxito
+      _navigatorKey.currentState?.pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
+        ),
       );
     }
   }
@@ -121,12 +144,11 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: _navigatorKey,
+      navigatorKey: _navigatorKey, // ¡Crucial para la navegación sin context!
       title: 'OsitoPolar App',
-
-      // --- CONFIGURACIÓN VISUAL ---
       debugShowCheckedModeBanner: false,
 
+      // --- TEMA GLOBAL (Para evitar el morado) ---
       theme: ThemeData(
         fontFamily: 'Inter',
         useMaterial3: true,
@@ -136,16 +158,18 @@ class _MyAppState extends State<MyApp> {
           background: AppColors.backgroundLight,
         ),
         scaffoldBackgroundColor: AppColors.backgroundLight,
+
+        // Estilo de Botones
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryButton,
             foregroundColor: AppColors.buttonLabel,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           ),
         ),
+
+        // Estilo de Inputs
         inputDecorationTheme: const InputDecorationTheme(
           filled: true,
           fillColor: AppColors.textFieldBackground,
@@ -163,106 +187,79 @@ class _MyAppState extends State<MyApp> {
           ),
           labelStyle: TextStyle(color: AppColors.textColor),
         ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.primaryButton,
-          ),
-        ),
       ),
 
-      // --- RUTA INICIAL ---
-      initialRoute: AppRoute.getStarted,
+      // --- RUTA INICIAL (ONBOARDING) ---
+      initialRoute: AppRoute.getStarted, // <-- ¡Tu diseño nuevo!
 
+      // --- GENERADOR DE RUTAS ---
       onGenerateRoute: (settings) {
-        // ------------------------------------------------------------------
-        // CORRECCIÓN AQUÍ: Manejo del Deep Link pasando datos genéricos
-        // ------------------------------------------------------------------
-        if (settings.name != null && settings.name!.startsWith('/registration/success')) {
-          final Uri uri = Uri.parse(settings.name!);
-          final String? sessionId = uri.queryParameters['session_id'];
 
+        // Manejo especial para el link de éxito en WEB (si usas #/)
+        if (settings.name != null && settings.name!.startsWith('/registration/success')) {
+          final uri = Uri.parse(settings.name!);
+          final sessionId = uri.queryParameters['session_id'];
           return MaterialPageRoute(
-            builder: (context) => ProviderRegistrationSuccessPage(
-              sessionId: sessionId,
-              // Como venimos de un link externo, no tenemos los datos del form,
-              // así que ponemos un placeholder o indicamos que verifique su correo.
-              username: "Usuario Verificado",
-              password: "*** (Revisa tu correo) ***",
-            ),
+            builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
           );
         }
 
         switch (settings.name) {
+        // --- ONBOARDING ---
           case AppRoute.getStarted:
             return MaterialPageRoute(builder: (context) => const GetStartedScreen());
 
           case AppRoute.selectProfile:
             return MaterialPageRoute(builder: (context) => const SelectProfileScreen());
 
-          case AppRoute.clientLogin:
-          case '/client_login':
+        // --- AUTH ---
+          case AppRoute.clientLogin: // '/client_login'
             return MaterialPageRoute(builder: (context) => ClientLoginPage(
-              onLoginClicked: (username, password) {},
+              onLoginClicked: (u, p) {},
               onRegisterClicked: () => Navigator.pushNamed(context, AppRoute.clientRegister),
               onForgotPasswordClicked: () {},
             ));
+          case AppRoute.clientRegister: // '/client_register'
+            return MaterialPageRoute(builder: (context) => ClientRegisterPage(
+              onSignUpClicked: (u, p) => Navigator.pop(context),
+              onSignInClicked: () => Navigator.pop(context),
+            ));
 
-          case AppRoute.providerLogin:
-          case '/provider_login':
+          case AppRoute.providerLogin: // '/provider_login'
             return MaterialPageRoute(builder: (context) => ProviderLoginPage(
               onRegisterClicked: () => Navigator.pushNamed(context, AppRoute.providerRegister),
               onForgotPasswordClicked: () {},
             ));
-
-          case AppRoute.clientRegister:
-          case '/client_register':
-            return MaterialPageRoute(builder: (context) => ClientRegisterPage(
-              onSignUpClicked: (username, password) => Navigator.pop(context),
+          case AppRoute.providerRegister: // '/provider_register'
+            return MaterialPageRoute(builder: (context) => ProviderRegisterPage(
               onSignInClicked: () => Navigator.pop(context),
             ));
 
-          case AppRoute.providerRegister:
-          case '/provider_register':
-            return MaterialPageRoute(builder: (context) => const ProviderRegisterPage());
-
-          case AppRoute.providerHome:
-          case '/provider_home':
+        // --- PROVIDER MODULE ---
+          case '/provider_home': // Dashboard
             return MaterialPageRoute(builder: (context) => const ProviderHomePage());
 
-          case AppRoute.providerMyEquipments:
-          case '/provider_my_equipments':
-            return MaterialPageRoute(builder: (context) => MyEquipmentPage());
+          case '/provider_my_equipments': // Inventario
+            return MaterialPageRoute(builder: (context) => const MyEquipmentPage());
 
-          case AppRoute.providerMarketplace:
-          case '/provider_marketplace':
+          case '/provider_marketplace': // Marketplace
             return MaterialPageRoute(builder: (context) => const MarketplacePage());
 
-          case AppRoute.providerAddEquipment:
-          case '/provider_add_equipment':
-            final equipmentId = settings.arguments as int?;
-            return MaterialPageRoute(
-              builder: (context) => AddEquipmentPage(equipmentId: equipmentId),
-            );
-
-          case AppRoute.providerTechnicianDetail:
-          case '/provider_technician_detail':
-            final technicianId = settings.arguments as int;
-            return MaterialPageRoute(
-              builder: (context) => TechnicianDetailPage(technicianId: technicianId),
-            );
-
-          case AppRoute.providerEquipmentDetail:
-          case '/provider_equipment_detail':
-            return MaterialPageRoute(builder: (context) => const ProviderEquipmentDetailPage());
-
-          case AppRoute.providerClientsTechnicians:
-          case '/provider_clients_technicians':
+          case '/provider_clients_technicians': // Técnicos
             return MaterialPageRoute(builder: (context) => const ProviderClientsTechniciansPage());
 
-          case AppRoute.providerClientAccount:
-          case '/provider_client_account':
-            return MaterialPageRoute(builder: (context) => const ProviderClientAccountPage());
 
+        // --- SUB-PÁGINAS ---
+          case '/provider_add_equipment':
+            final equipmentId = settings.arguments as int?;
+            return MaterialPageRoute(builder: (context) => AddEquipmentPage(equipmentId: equipmentId));
+
+          case '/provider_technician_detail':
+            final technicianId = settings.arguments as int;
+            return MaterialPageRoute(builder: (context) => TechnicianDetailPage(technicianId: technicianId));
+
+
+        // Default
           default:
             return MaterialPageRoute(builder: (context) => const GetStartedScreen());
         }

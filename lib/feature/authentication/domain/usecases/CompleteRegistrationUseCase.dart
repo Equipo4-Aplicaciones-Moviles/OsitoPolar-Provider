@@ -2,13 +2,15 @@ import 'package:dartz/dartz.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthRepository.dart';
 import 'package:equatable/equatable.dart';
+// --- ¡AÑADE ESTE IMPORT! ---
+import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCredentialsEntity.dart';
 
 class CompleteRegistrationUseCase {
   final AuthRepository repository;
   CompleteRegistrationUseCase(this.repository);
 
-  Future<Either<Failure, void>> call(CompleteRegistrationParams params) async {
-    // Llama al repositorio con el 'sessionId' y el 'Map' de datos
+  // --- ¡CAMBIO AQUÍ! De 'void' a 'RegistrationCredentialsEntity' ---
+  Future<Either<Failure, RegistrationCredentialsEntity>> call(CompleteRegistrationParams params) async {
     return await repository.completeRegistration(
       sessionId: params.sessionId,
       registrationData: params.toJson(),
@@ -16,7 +18,7 @@ class CompleteRegistrationUseCase {
   }
 }
 
-// Este 'Params' tiene TODOS los datos del formulario + el sessionId
+// (La clase 'CompleteRegistrationParams' se queda IGUAL, no hace falta tocarla)
 class CompleteRegistrationParams extends Equatable {
   final String sessionId;
   final String username;
@@ -30,7 +32,6 @@ class CompleteRegistrationParams extends Equatable {
   final String city;
   final String postalCode;
   final String country;
-  // (No necesitamos planId o userType aquí, la API los lee del 'sessionId')
 
   const CompleteRegistrationParams({
     required this.sessionId,
@@ -47,7 +48,6 @@ class CompleteRegistrationParams extends Equatable {
     required this.country,
   });
 
-  // Genera el Map que la API 'complete-registration' espera
   Map<String, dynamic> toJson() => {
     "sessionId": sessionId,
     "username": username,

@@ -1,6 +1,7 @@
 import 'package:osito_polar_app/feature/authentication/data/models/SignInRequestModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/models/AuthenticatedUserModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/models/RegistrationCheckoutModel.dart';
+import 'package:osito_polar_app/feature/authentication/data/models/RegistrationCredentialsModel.dart';
 
 abstract class AuthRemoteDataSource {
   Future<AuthenticatedUserModel> signIn(SignInRequestModel request);
@@ -15,7 +16,7 @@ abstract class AuthRemoteDataSource {
   });
 
   // --- ¡NUEVO MÉTODO! ---
-  Future<void> completeRegistration({
+  Future<RegistrationCredentialsModel> completeRegistration({
     required String sessionId,
     required Map<String, dynamic> registrationData,
   });

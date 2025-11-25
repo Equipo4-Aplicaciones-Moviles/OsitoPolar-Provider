@@ -7,6 +7,8 @@ import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthR
 // --- ¡NUEVO IMPORT! ---
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 
+import '../../domain/entities/RegistrationCredentialsEntity.dart';
+
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
@@ -54,20 +56,25 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   // --- ¡NUEVO MÉTODO! ---
+
   @override
-  Future<Either<Failure, void>> completeRegistration({
+  Future<Either<Failure, RegistrationCredentialsEntity>> completeRegistration({
     required String sessionId,
     required Map<String, dynamic> registrationData,
   }) async {
     try {
-      // El DataSource no devuelve nada (void)
-      await remoteDataSource.completeRegistration(
+      // 1. Llama al DataSource y recibe el MODELO
+      final credentialsModel = await remoteDataSource.completeRegistration(
         sessionId: sessionId,
         registrationData: registrationData,
       );
-      return const Right(null); // (Right(null) significa Éxito/void)
+
+      // 2. Convierte el Modelo a ENTIDAD y devuélvelo
+      return Right(credentialsModel.toEntity());
+
     } on Exception catch (e) {
-      return Left(ServerFailure());
+      // (Manejo de errores simple, puedes mejorarlo con ServerException)
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 }
