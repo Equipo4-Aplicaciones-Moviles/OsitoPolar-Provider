@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-
+import 'package:osito_polar_app/feature/equipment/domain/entities/RentalInfoEntity.dart';
 /// La Entidad PURA de un Equipo.
 /// Pertenece a la capa de Domain y es lo que la UI usará.
 class EquipmentEntity extends Equatable {
@@ -25,6 +25,10 @@ class EquipmentEntity extends Equatable {
   final String ownershipType;
 
 
+  final double cost;
+  final RentalInfoEntity? rentalInfo;
+
+
   const EquipmentEntity({
     required this.id,
     required this.name,
@@ -43,10 +47,19 @@ class EquipmentEntity extends Equatable {
     required this.notes,
     required this.ownershipType,
 
+    required this.cost,
+    this.rentalInfo,
+
   });
 
+  bool get isPublishedForRent {
+    return rentalInfo != null ||
+        ownershipType == 'Rented' ||
+        ownershipType == 'RenterProvider';
+  }
+
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
     id,
     name,
     type,
@@ -62,6 +75,8 @@ class EquipmentEntity extends Equatable {
     technicalDetails,
     notes,
     ownershipType,
+    rentalInfo,
+    cost
 
   ];
 }

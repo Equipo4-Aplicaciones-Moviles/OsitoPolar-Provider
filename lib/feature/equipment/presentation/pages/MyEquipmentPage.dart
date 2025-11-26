@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
-import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
+import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -14,16 +16,6 @@ class MyEquipmentPage extends StatefulWidget {
 
 class _MyEquipmentPageState extends State<MyEquipmentPage> {
   bool _isProcessing = false;
-
-  void showAppMessage(String msg, bool success) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: success ? Colors.green : Colors.red,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -39,30 +31,24 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     final state = provider.state;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: const Color(0xFFF5F7FA), // Fondo gris claro
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        shadowColor: AppColors.cardBorder,
-        leading: Builder(builder: (ctx) {
-          return IconButton(
-            icon: const Icon(Icons.menu, color: AppColors.iconColor, size: 30),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          );
-        }),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.title),
         title: const Text(
-          'Mis Equipos',
+          'Inventario',
           style: TextStyle(
             color: AppColors.logoColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            fontFamily: 'Inter',
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
           ),
         ),
         centerTitle: true,
       ),
       drawer: const ProviderDrawer(),
       body: _buildBody(context, provider, state),
+
       floatingActionButton: FloatingActionButton(
         onPressed: _isProcessing
             ? null
@@ -73,418 +59,253 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           }
         },
         backgroundColor: AppColors.primaryButton,
-        foregroundColor: AppColors.buttonLabel,
-        tooltip: 'Añadir Equipo',
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildPublicationBadge(EquipmentEntity eq) {
-    final isPublished = eq.ownershipType=='Rented'; // Usa el getter que añadimos
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isPublished ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isPublished ? Colors.green : Colors.red,
-          width: 1.2,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isPublished ? Icons.public : Icons.public_off,
-            size: 18,
-            color: isPublished ? Colors.green : Colors.red,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            isPublished ? 'Publicado' : 'No Publicado',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isPublished ? Colors.green : Colors.red,
-            ),
-          ),
-        ],
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add, size: 32),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context, EquipmentProvider provider, EquipmentState state) {
-    switch (state) {
-      case EquipmentState.initial:
-      case EquipmentState.loading:
-        return const Center(child: CircularProgressIndicator());
-      case EquipmentState.error:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Error: ${provider.errorMessage}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
-            ),
-          ),
-        );
-      case EquipmentState.success:
-        return _buildDashboardContent(context, provider);
+    if (state == EquipmentState.loading) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primaryButton));
     }
+    if (state == EquipmentState.error) {
+      return Center(child: Text('Error: ${provider.errorMessage}', style: const TextStyle(color: Colors.red)));
+    }
+    return _buildDashboardContent(context, provider);
   }
 
   Widget _buildDashboardContent(BuildContext context, EquipmentProvider provider) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Mi Inventario'),
-            const SizedBox(height: 8),
-            _buildEquipmentList(context, provider),
-            const SizedBox(height: 80),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontFamily: 'Inter',
-        fontWeight: FontWeight.bold,
-        fontSize: 22,
-        color: AppColors.title,
-      ),
-    ),
-  );
-
-  Widget _buildEquipmentList(BuildContext context, EquipmentProvider provider) {
-    final equipments = provider.equipments;
-
-    if (equipments.isEmpty) {
-      return Card(
-        elevation: 0,
-        color: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
-          side: const BorderSide(color: AppColors.cardBorder, width: 1),
-        ),
-        child: const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Center(
-            child: Text(
-              'No se encontraron equipos. ¡Añade uno con el botón +!',
-              style: TextStyle(fontFamily: 'Inter', color: AppColors.textColor),
-              textAlign: TextAlign.center,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+          child: Text(
+            "Mis equipos",
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black87, fontFamily: 'Inter'),
           ),
         ),
-      );
-    }
-
-    return SizedBox(
-      height: 480,
-      child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9),
-        itemCount: equipments.length,
-        itemBuilder: (context, index) {
-          final equipment = equipments[index];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: _buildEquipmentCard(context, provider, equipment),
-          );
-        },
-      ),
+        Expanded(
+          child: provider.equipments.isEmpty
+              ? _buildEmptyState()
+              : ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: provider.equipments.length,
+            separatorBuilder: (ctx, i) => const SizedBox(height: 16),
+            itemBuilder: (ctx, i) => _buildEquipmentCard(provider.equipments[i], provider),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildEquipmentCard(BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
-    final statusColor = (eq.status.toLowerCase() == 'active' || eq.status.toLowerCase() == 'normal')
-        ? Colors.green
-        : Colors.red;
+  Widget _buildEmptyState() {
+    return Center(
+      child: Text("No tienes equipos registrados.", style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+    );
+  }
 
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      color: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: const BorderSide(color: AppColors.cardBorder, width: 1),
+  // --- TARJETA IDÉNTICA A LA IMAGEN ---
+  Widget _buildEquipmentCard(EquipmentEntity eq, EquipmentProvider provider) {
+
+    // Estado: ¿Está publicado?
+    final bool isPublished = eq.isPublishedForRent;
+    String priceText;
+
+    // Texto del precio (si no está publicado, mostramos 0 o guiones)
+    if (isPublished) {
+      if (eq.rentalInfo != null) {
+        // Si tenemos el objeto (ej. acabamos de publicar)
+        priceText = "Alquiler: \$ ${eq.rentalInfo!.monthlyFee.toStringAsFixed(0)} / mes";
+      } else {
+        // Si sabemos que está alquilado por el 'ownershipType', pero no tenemos el precio
+        priceText = "Publicado (Ver detalle para precio)";
+      }
+    } else {
+      priceText = "No publicado";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24), // Bordes muy redondos
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: SingleChildScrollView(
+      child: Row(
+        children: [
+          // 1. ICONO AZUL (Izquierda)
+          Container(
+            width: 70, height: 70,
+            decoration: BoxDecoration(
+              color: const Color(0xFF82C2F8), // Azul claro como la imagen
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.kitchen, color: Colors.white, size: 36), // Icono blanco sobre azul
+          ),
+
+          const SizedBox(width: 16),
+
+          // 2. DATOS (Centro)
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.power_settings_new, color: Colors.green, size: 30),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            eq.name,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-
-                          const SizedBox(height: 6),
-                          _buildPublicationBadge(eq),
-
-                          const SizedBox(height: 6),
-
-                          Text(
-                            '${eq.type} ${eq.model}',
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                    CircleAvatar(radius: 8, backgroundColor: statusColor),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                Container(
-                  width: 100,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.textFieldBackground,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  child: const Icon(Icons.kitchen_outlined,
-                      color: AppColors.textColor, size: 60),
-                ),
-
-                const SizedBox(height: 16),
-
+                // Nombre del Equipo
                 Text(
-                  '${eq.currentTemperature.toStringAsFixed(0)}°',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 50,
-                  ),
+                  eq.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
 
-                Text('(${eq.status})',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                // Precio
+                Text(
+                  priceText,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 8),
 
-                const SizedBox(height: 20),
-
+                // CHIP "DISPONIBLE" (Verde)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.textFieldBackground.withOpacity(0.5),
+                    color: isPublished ? const Color(0xFFE0F2F1) : const Color(0xFFF5F5F5), // Verde claro o Gris
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on, size: 18),
-                      const SizedBox(width: 8),
-                      Text(eq.locationName,
-                          style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600)),
-                    ],
+                  child: Text(
+                    isPublished ? "Disponible" : "No Listado",
+                    style: TextStyle(
+                      color: isPublished ? const Color(0xFF2E7D32) : Colors.grey, // Texto Verde o Gris
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-
-                const SizedBox(height: 20), // <- reemplaza Spacer()
-
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: ElevatedButton.icon(
-                        onPressed: _isProcessing
-                            ? null
-                            : () => _showPublishDialog(context, provider, eq),
-                        icon: const Icon(Icons.public, size: 16),
-                        label: const Text('Publicar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: IconButton(
-                        icon: const Icon(Icons.public_off, size: 20),
-                        onPressed: _isProcessing
-                            ? null
-                            : () => _showUnpublishDialog(context, provider, eq),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.grey[600],
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, size: 20),
-                        onPressed: _isProcessing
-                            ? null
-                            : () => _showDeleteDialog(context, provider, eq),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.red[700],
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
-        )
-    );
-  }
 
-
-
-  void _showDeleteDialog(
-      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar Borrado'),
-        content: Text('¿Borrar "${eq.name}"? Esta acción no se puede deshacer.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Borrar'),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isProcessing = true);
-
-              final success = await provider.deleteEquipment(eq.id);
-
-              showAppMessage(
-                success ? '¡Equipo "${eq.name}" borrado!' : 'Error: ${provider.errorMessage}',
-                success,
-              );
-
-              if (success && mounted) {
-                await provider.loadEquipments();
-              }
-
-              if (mounted) setState(() => _isProcessing = false);
-            },
+          // 3. SWITCH (Derecha)
+          Transform.scale(
+            scale: 0.9, // Un poco más pequeño para que se vea elegante
+            child: Switch(
+              value: isPublished,
+              activeColor: AppColors.primaryButton, // Azul cuando está ON
+              onChanged: _isProcessing
+                  ? null
+                  : (bool newValue) {
+                if (newValue) {
+                  // Si lo prende -> Publicar
+                  _showPublishDialog(context, provider, eq);
+                } else {
+                  // Si lo apaga -> Ocultar
+                  _showUnpublishDialog(context, provider, eq);
+                }
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showPublishDialog(
-      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
-    final priceController = TextEditingController(text: '100.00');
+  // --- DIÁLOGOS ---
 
+  void _showPublishDialog(BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
+    final priceController = TextEditingController(text: '100.00');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Publicar Equipo'),
-        content: TextField(
-          controller: priceController,
-          decoration: const InputDecoration(
-            labelText: 'Precio mensual (USD)',
-            prefixIcon: Icon(Icons.attach_money),
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Ingresa el precio de alquiler mensual para activar este equipo en el mercado."),
+            const SizedBox(height: 16),
+            TextField(
+              controller: priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Precio (USD)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.attach_money),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Publicar', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryButton),
             onPressed: () async {
               final price = double.tryParse(priceController.text);
-              if (price == null || price <= 0) return;
-
+              if (price == null) return;
               Navigator.pop(ctx);
+
               setState(() => _isProcessing = true);
+              try {
+                final success = await provider.publishEquipment(eq.id, price);
 
-              final success = await provider.publishEquipment(eq.id, price);
+                if (success) {
+                  Fluttertoast.showToast(msg: "¡Equipo publicado!", backgroundColor: Colors.green);
+                } else {
+                  // SI FALLA, MIRAMOS EL ERROR
+                  if (provider.errorMessage.contains("already rented") ||
+                      provider.errorMessage.contains("cannot be published")) {
 
-              showAppMessage(
-                success
-                    ? '¡"${eq.name}" publicado exitosamente!'
-                    : 'Error: ${provider.errorMessage}',
-                success,
-              );
-
-              if (success && mounted) {
-                await provider.loadEquipments();
+                    Fluttertoast.showToast(msg: "Actualizando estado...", backgroundColor: Colors.orange);
+                    // El equipo ya estaba publicado, pero la UI no lo sabía.
+                    // Al recargar, deberíamos intentar forzar la actualización.
+                  } else {
+                    Fluttertoast.showToast(msg: "Error: ${provider.errorMessage}", backgroundColor: Colors.red);
+                  }
+                }
+              } finally {
+                // SIEMPRE recargamos para sincronizar con la verdad del backend
+                if (mounted) await provider.loadEquipments();
+                if (mounted) setState(() => _isProcessing = false);
               }
-
-              if (mounted) setState(() => _isProcessing = false);
             },
+            child: const Text('Activar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  void _showUnpublishDialog(
-      BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
+  void _showUnpublishDialog(BuildContext context, EquipmentProvider provider, EquipmentEntity eq) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Ocultar Equipo'),
-        content: Text('¿Ocultar "${eq.name}" del marketplace?'),
+        content: const Text('¿Deseas desactivar este equipo? Dejará de aparecer en el marketplace.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-            child: const Text('Ocultar', style: TextStyle(color: Colors.white)),
             onPressed: () async {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
 
               final success = await provider.unpublishEquipment(eq.id);
-              final alreadyHidden =
-              provider.errorMessage.contains('not published for rent');
+              final isSuccess = success || provider.errorMessage.contains('not published');
 
-              final ok = success || alreadyHidden;
-
-              showAppMessage(
-                ok ? '¡"${eq.name}" ocultado!' : 'Error: ${provider.errorMessage}',
-                ok,
-              );
-
-              if (ok && mounted) {
-                await provider.loadEquipments();
+              if (isSuccess) {
+                Fluttertoast.showToast(msg: "Equipo ocultado", backgroundColor: Colors.grey);
+                if (mounted) await provider.loadEquipments();
+              } else {
+                Fluttertoast.showToast(msg: "Error: ${provider.errorMessage}", backgroundColor: Colors.red);
               }
 
               if (mounted) setState(() => _isProcessing = false);
             },
+            child: const Text('Desactivar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
