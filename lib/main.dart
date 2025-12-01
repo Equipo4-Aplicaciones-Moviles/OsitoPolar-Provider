@@ -125,19 +125,26 @@ class _MyAppState extends State<MyApp> {
   void _handleDeepLink(Uri uri) {
     print("🔗 Link Recibido: $uri");
 
-    // Buscamos el session_id en la URL
-    // Puede venir como query parameter (?session_id=...)
-    // Ojo: Dependiendo de tu config en Firebase, podría venir diferente.
     final sessionId = uri.queryParameters['session_id'];
 
     if (sessionId != null) {
       print("✅ Session ID encontrado: $sessionId");
-      // Navegamos a la pantalla de éxito
-      _navigatorKey.currentState?.pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
-        ),
-      );
+
+      // SOLUCIÓN: Esperar a que el frame se dibuje antes de navegar
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Verificamos si el navegador está listo
+        if (_navigatorKey.currentState != null) {
+          print("🚀 Navegando a SuccessPage...");
+          _navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
+            ),
+                (route) => false, // Esto borra el historial para que no pueda volver atrás
+          );
+        } else {
+          print("⚠️ El Navigator aún no estaba listo");
+        }
+      });
     }
   }
 
