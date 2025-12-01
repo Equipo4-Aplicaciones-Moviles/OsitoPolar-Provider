@@ -7,7 +7,14 @@ import '../../../../core/theme/app_colors.dart';
 enum ProfileType { client, company }
 
 class SelectProfileScreen extends StatefulWidget {
-  const SelectProfileScreen({super.key});
+
+  final VoidCallback onClientClicked;
+  final VoidCallback onProviderClicked;
+  const SelectProfileScreen({
+    super.key,
+    required this.onClientClicked,
+    required this.onProviderClicked,
+  });
 
   @override
   State<SelectProfileScreen> createState() => _SelectProfileScreenState();
@@ -21,9 +28,11 @@ class _SelectProfileScreenState extends State<SelectProfileScreen> {
 
     void onContinue() {
       if (_selectedProfile == ProfileType.client) {
-        Navigator.pushNamed(context, AppRoute.clientLogin);
+        // Ejecutamos la función que nos pasó el main.dart
+        widget.onClientClicked();
       } else if (_selectedProfile == ProfileType.company) {
-        Navigator.pushNamed(context, AppRoute.providerLogin);
+        // Ejecutamos la función que nos pasó el main.dart (que lleva a /select_plan)
+        widget.onProviderClicked();
       }
     }
 

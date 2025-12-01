@@ -11,6 +11,7 @@ import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateReg
 class ProviderRegisterPage extends StatefulWidget {
   final VoidCallback? onSignInClicked;
 
+  // El ID del plan viene desde la pantalla anterior (SelectPlanPage)
   final int? planId;
 
   const ProviderRegisterPage({
@@ -24,17 +25,18 @@ class ProviderRegisterPage extends StatefulWidget {
 }
 
 class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
-  int _currentStep = 1; // Empezamos en 1 para coincidir con tu diseño visual (1 y 2)
+  int _currentStep = 1; // 1: Info Personal, 2: Dirección
+  bool _acceptedTerms = false; // <--- NUEVO: Control del Checkbox
 
-  // Llaves para validar
+  // Llaves para validar formularios
   final _step1FormKey = GlobalKey<FormState>();
   final _step2FormKey = GlobalKey<FormState>();
 
-  // --- CONTROLADORES (Datos Reales) ---
+  // --- CONTROLADORES ---
   // Paso 1
-  final _nameController = TextEditingController(); // FirstName
+  final _nameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _usernameController = TextEditingController(); // (Opcional/Auto)
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _taxIdController = TextEditingController();
@@ -70,7 +72,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
     // Mapa de datos para la API
     final formData = {
-      // Si no llenó usuario, usamos el email
       "username": _usernameController.text.isNotEmpty ? _usernameController.text : _emailController.text,
       "email": _emailController.text,
       "companyName": _companyNameController.text,
@@ -84,29 +85,27 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       "country": _countryController.text,
     };
 
-
     String successUrl;
     String cancelUrl;
 
     if (kIsWeb) {
-      // Si estamos en Edge/Chrome, volvemos al mismo localhost donde estamos
-      // Uri.base.origin obtiene "http://localhost:1234" automáticamente
       successUrl = "${Uri.base.origin}/#/registration/success";
       cancelUrl = "${Uri.base.origin}/#/registration/cancel";
     } else {
-      // Si estamos en Android, usamos el esquema nativo
+      // Esquema nativo configurado en AndroidManifest
       successUrl = "ositopolar://registration/success";
       cancelUrl = "ositopolar://registration/cancel";
     }
 
     final checkoutParams = CheckoutParams(
+      // Usamos el planId que viene de la pantalla anterior, o el 4 por defecto
       planId: widget.planId ?? 4,
       userType: "Provider",
-      successUrl: successUrl, // Usa la variable dinámica
-      cancelUrl: cancelUrl,   // Usa la variable dinámica
+      successUrl: successUrl,
+      cancelUrl: cancelUrl,
     );
 
-    print("Iniciando Lógica Real: Creando checkout...");
+    print("Iniciando Lógica Real: Creando checkout con Plan ID: ${widget.planId}...");
     provider.createCheckout(formData, checkoutParams);
   }
 
@@ -123,7 +122,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     }
   }
 
-  // --- LÓGICA DE NAVEGACIÓN VISUAL ---
   void _onNextPressed() {
     if (_step1FormKey.currentState!.validate()) {
       setState(() => _currentStep = 2);
@@ -137,7 +135,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     final state = provider.state;
     final bool isLoading = (state == RegisterState.creatingCheckout);
 
-    // Listener para redirección
+    // Listener para redirección a Stripe
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state == RegisterState.checkoutCreated) {
         final url = provider.checkoutEntity?.checkoutUrl;
@@ -154,7 +152,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
           // CAPA 1: Fondo Blanco
           Container(color: Colors.white),
 
-          // CAPA 2: Degradado (Diseño Nuevo)
+          // CAPA 2: Degradado
           Opacity(
             opacity: 0.3,
             child: Container(
@@ -163,7 +161,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    // Si no tienes estos colores definidos, usa Colors.blue.shade50
                     AppColors.backgroundLight,
                     Colors.white,
                   ],
@@ -186,7 +183,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
-                        color: Colors.black, // O AppColors.textBlack
+                        color: Colors.black,
                         letterSpacing: -0.5,
                         fontFamily: 'Inter',
                       ),
@@ -218,7 +215,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
 
                     const SizedBox(height: 40),
 
-                    // Error Message (Lógica Real)
+                    // Error Message
                     if (state == RegisterState.error)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 20),
@@ -240,9 +237,15 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                     else
                       Form(key: _step2FormKey, child: _buildStep2Form(isLoading)),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
 
-                    // Botón de Acción (Diseño Nuevo + Lógica Real)
+                    // --- NUEVO: CHECKBOX DE TÉRMINOS (Solo en el paso final) ---
+                    if (_currentStep == 2)
+                      _buildTermsCheckbox(),
+
+                    const SizedBox(height: 20),
+
+                    // Botón de Acción
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -250,11 +253,26 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                         onPressed: isLoading
                             ? null
                             : () {
+                          // Lógica del botón
                           if (_currentStep == 1) {
                             _onNextPressed();
                           } else {
+                            // Estamos en el paso 2 (Final)
+
+                            // 1. Validar Checkbox
+                            if (!_acceptedTerms) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Debes aceptar los Términos y Condiciones para continuar.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // 2. Validar Formulario y Enviar
                             if (_step2FormKey.currentState!.validate()) {
-                              _submitRegistration(); // <-- ¡Conexión Real!
+                              _submitRegistration();
                             }
                           }
                         },
@@ -262,7 +280,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                           backgroundColor: AppColors.primaryButton,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(100), // Borde Redondo Nuevo
+                            borderRadius: BorderRadius.circular(100),
                           ),
                           elevation: 0,
                         ),
@@ -283,6 +301,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                       ),
                     ),
 
+                    // Botón Atrás
                     if (_currentStep == 2)
                       Padding(
                         padding: const EdgeInsets.only(top: 16.0),
@@ -292,30 +311,6 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 30),
-
-                    // Footer
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      children: [
-                        const Text(
-                          '¿No tienes cuenta? ',
-                          style: TextStyle(color: Color(0xFF667085), fontSize: 14, fontFamily: 'Inter'),
-                        ),
-                        GestureDetector(
-                          onTap: () { /* Lógica para ir a registro de cliente si aplica */ },
-                          child: const Text(
-                            'Regístrate',
-                            style: TextStyle(
-                              color: AppColors.primaryButton,
-                              fontWeight: FontWeight.w400,
-                              fontSize: 14,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -327,7 +322,57 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     );
   }
 
-  // --- WIDGETS VISUALES (Idénticos al diseño nuevo) ---
+  // --- WIDGETS VISUALES ---
+
+  // NUEVO: Widget del Checkbox con enlace
+  Widget _buildTermsCheckbox() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 24,
+          width: 24,
+          child: Checkbox(
+            value: _acceptedTerms,
+            activeColor: AppColors.primaryButton,
+            side: const BorderSide(color: Colors.grey, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            onChanged: (bool? val) {
+              setState(() {
+                _acceptedTerms = val ?? false;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              // Navega a la página de términos
+              Navigator.pushNamed(context, '/terms');
+            },
+            child: RichText(
+              text: const TextSpan(
+                text: 'He leído y acepto los ',
+                style: TextStyle(color: Color(0xFF667085), fontFamily: 'Inter', fontSize: 14),
+                children: [
+                  TextSpan(
+                    text: 'Términos y Condiciones',
+                    style: TextStyle(
+                      color: AppColors.primaryButton,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  TextSpan(text: ' y la Política de Privacidad.'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildStepper() {
     return Padding(
@@ -338,7 +383,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
           _buildStepItem(text: 'Info Personal', number: '1', isActive: _currentStep >= 1),
           Expanded(
             child: Container(
-              margin: const EdgeInsets.only(top: 15.0, left: 10.0, right: 10.0), // Ajuste visual
+              margin: const EdgeInsets.only(top: 15.0, left: 10.0, right: 10.0),
               height: 2,
               color: AppColors.primaryButton,
             ),
@@ -495,7 +540,7 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
     bool isEnabled = true,
     String? Function(String?)? validator,
   }) {
-    return TextFormField( // Usamos TextFormField para que funcione el validator
+    return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       enabled: isEnabled,
@@ -508,12 +553,11 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       ),
       decoration: InputDecoration(
         filled: true,
-        fillColor: const Color(0xFFE1E7EF), // Color Grisáceo
+        fillColor: const Color(0xFFE1E7EF),
         hintText: hintText,
         hintStyle: const TextStyle(color: Colors.black38, fontSize: 15, fontFamily: 'Inter'),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
 
-        // Bordes Redondos (Píldora)
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(100),
           borderSide: BorderSide.none,

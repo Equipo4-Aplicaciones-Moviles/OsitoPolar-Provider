@@ -31,7 +31,7 @@ class SelectPlanPage extends StatelessWidget {
               "Critical fault email alerts",
               "Remote on/off control"
             ],
-            planId: 1, // ID que enviaremos al backend
+            planId: 4, // ID que enviaremos al backend
             isHighlighted: false,
           ),
 
@@ -48,7 +48,7 @@ class SelectPlanPage extends StatelessWidget {
               "Advanced monitoring",
               "Scheduled maintenance"
             ],
-            planId: 2,
+            planId: 5,
             isHighlighted: true, // Este sale diferente en tu diseño (blanco)
           ),
 
@@ -65,7 +65,7 @@ class SelectPlanPage extends StatelessWidget {
               "Maintenance history log",
               "Email support"
             ],
-            planId: 3,
+            planId: 6,
             isHighlighted: false,
           ),
         ],
