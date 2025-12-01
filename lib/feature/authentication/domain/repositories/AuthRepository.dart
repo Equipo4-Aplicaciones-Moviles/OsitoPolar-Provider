@@ -26,4 +26,9 @@ abstract class AuthRepository {
     required String sessionId,
     required Map<String, dynamic> registrationData,
   });
+
+  Future<Either<Failure, AuthenticatedUserEntity>> verifyTwoFactor({
+    required String username,
+    required String code,
+  });
 }

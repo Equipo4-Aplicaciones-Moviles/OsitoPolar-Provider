@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-// Importamos tu Provider y el estado del Login
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 
 class ProviderLoginPage extends StatefulWidget {
@@ -38,13 +37,19 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
     final state = provider.state;
     final bool isLoading = (state == LoginState.loading);
 
-    // 2. LISTENER para navegar al Home si es exitoso
+    // 2. LISTENER DE NAVEGACIÓN (ACTUALIZADO PARA 2FA)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
+      // CASO A: Login Directo (Tiene token) -> Ir al Home
       if (state == LoginState.success) {
-        // Navegamos al home y borramos la pila de navegación
-        Navigator.pushNamedAndRemoveUntil(context, '/provider_home', (route) => false);
-        // Opcional: Resetear el estado del provider después de navegar
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/provider_home', (route) => false);
       }
+      // CASO B: Requiere 2FA (No tiene token aún) -> Ir a pantalla de QR
+      else if (state == LoginState.requires2FA) {
+        Navigator.pushNamed(context, '/2fa_setup');
+      }
+
     });
 
     return Scaffold(
@@ -68,7 +73,6 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    // Asumiendo que AppColors.onboardingGradientStart/End son los correctos
                     AppColors.backgroundLight,
                     Colors.white,
                   ],
@@ -172,17 +176,15 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
 
                     const SizedBox(height: 40),
 
-                    // --- BOTÓN LOGIN (CONECTADO) ---
+                    // --- BOTÓN LOGIN ---
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        // 3. LÓGICA DE PRESIONAR: Llama al Provider
                         onPressed: isLoading
                             ? null
                             : () {
                           if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
-                            // Validación rápida en UI
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Ingresa usuario y contraseña.')),
                             );
@@ -197,12 +199,10 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                           backgroundColor: AppColors.primaryButton,
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)), // Diseño píldora
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                         ),
                         child: isLoading
-                        // 4. MUESTRA SPINNER
                             ? const CircularProgressIndicator(color: Colors.white)
-                        // 5. TEXTO NORMAL
                             : const Text('Login', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
@@ -263,7 +263,6 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
         hintStyle: const TextStyle(color: Colors.black38, fontSize: 15, fontFamily: 'Inter'),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
 
-        // Bordes redondeados estilo "píldora"
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: const BorderSide(color: Colors.transparent, width: 0)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: const BorderSide(color: AppColors.primaryButton, width: 1.5)),

@@ -20,4 +20,9 @@ abstract class AuthRemoteDataSource {
     required String sessionId,
     required Map<String, dynamic> registrationData,
   });
+
+  Future<AuthenticatedUserModel> verifyTwoFactor({
+    required String username,
+    required String code,
+  });
 }

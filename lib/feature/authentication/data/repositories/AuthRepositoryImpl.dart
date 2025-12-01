@@ -77,4 +77,17 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(ServerFailure(message: e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, AuthenticatedUserEntity>> verifyTwoFactor({
+    required String username,
+    required String code,
+  }) async {
+    try {
+      final userModel = await remoteDataSource.verifyTwoFactor(username: username, code: code);
+      return Right(userModel.toEntity());
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
 }

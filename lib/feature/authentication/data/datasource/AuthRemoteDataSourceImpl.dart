@@ -106,4 +106,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw Exception('No se pudo conectar al servidor.');
     }
   }
+  @override
+  Future<AuthenticatedUserModel> verifyTwoFactor({
+    required String username,
+    required String code,
+  }) async {
+    // Llama a: POST /api/v1/authentication/verify-2fa
+    final uri = Uri.parse('$baseUrl/api/v1/authentication/verify-2fa');
+    print('Llamando a API (Verify 2FA): $uri');
+
+    try {
+      final response = await client.post(
+        uri,
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonEncode({
+          'username': username,
+          'code': code,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return AuthenticatedUserModel.fromJson(response.body);
+      } else {
+        throw Exception('Código incorrecto o error de servidor: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión en 2FA.');
+    }
+  }
 }

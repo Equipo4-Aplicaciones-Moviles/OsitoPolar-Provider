@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 // Lógica Real
@@ -10,9 +11,12 @@ import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateReg
 class ProviderRegisterPage extends StatefulWidget {
   final VoidCallback? onSignInClicked;
 
+  final int? planId;
+
   const ProviderRegisterPage({
     super.key,
     this.onSignInClicked,
+    this.planId,
   });
 
   @override
@@ -80,11 +84,26 @@ class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
       "country": _countryController.text,
     };
 
+
+    String successUrl;
+    String cancelUrl;
+
+    if (kIsWeb) {
+      // Si estamos en Edge/Chrome, volvemos al mismo localhost donde estamos
+      // Uri.base.origin obtiene "http://localhost:1234" automáticamente
+      successUrl = "${Uri.base.origin}/#/registration/success";
+      cancelUrl = "${Uri.base.origin}/#/registration/cancel";
+    } else {
+      // Si estamos en Android, usamos el esquema nativo
+      successUrl = "ositopolar://registration/success";
+      cancelUrl = "ositopolar://registration/cancel";
+    }
+
     final checkoutParams = CheckoutParams(
-      planId: 4,
+      planId: widget.planId ?? 4,
       userType: "Provider",
-      successUrl: "https://ositopolar-42d82.web.app/registration/success",
-      cancelUrl: "https://ositopolar-42d82.web.app/registration/cancel",
+      successUrl: successUrl, // Usa la variable dinámica
+      cancelUrl: cancelUrl,   // Usa la variable dinámica
     );
 
     print("Iniciando Lógica Real: Creando checkout...");
