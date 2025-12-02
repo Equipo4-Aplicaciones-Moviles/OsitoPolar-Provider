@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+ // Para formatear fechas si es necesario
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart';
-// --- ¡Importamos el provider y la entidad correctos! ---
+// --- Providers y Entidades ---
 import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
 
@@ -14,65 +14,40 @@ class MarketplacePage extends StatefulWidget {
 }
 
 class _MarketplacePageState extends State<MarketplacePage> {
-  bool _isProcessing = false; // Bloquea los botones durante las peticiones
+  bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // --- Carga las solicitudes del Marketplace al iniciar la página ---
       context.read<MarketplaceProvider>().loadMarketplaceData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- Observa el estado del MarketplaceProvider ---
     final provider = context.watch<MarketplaceProvider>();
     final state = provider.state;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        shadowColor: AppColors.cardBorder,
-        leading: Builder(builder: (ctx) {
-          return IconButton(
-            icon: const Icon(Icons.menu, color: AppColors.iconColor, size: 30),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          );
-        }),
-        title: const Text(
-          'Marketplace de Servicios', // Título de la página
-          style: TextStyle(
-            color: AppColors.logoColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            fontFamily: 'Inter',
-          ),
-        ),
-        centerTitle: true,
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: SafeArea(
+        child: _buildBody(context, provider, state),
       ),
-      drawer: const ProviderDrawer(),
-      // --- Construye el cuerpo según el estado del provider ---
-      body: _buildBody(context, provider, state),
     );
   }
 
-  /// Construye el cuerpo principal de la página (indicadores de carga/error/éxito).
-  Widget _buildBody(
-      BuildContext context, MarketplaceProvider provider, MarketplaceState state) {
+  Widget _buildBody(BuildContext context, MarketplaceProvider provider, MarketplaceState state) {
     switch (state) {
       case MarketplaceState.initial:
       case MarketplaceState.loading:
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: CircularProgressIndicator(color: AppColors.primaryButton));
       case MarketplaceState.error:
         return Center(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: Text(
-              'Error al cargar solicitudes: ${provider.errorMessage}',
+              'Error: ${provider.errorMessage}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
             ),
@@ -83,208 +58,237 @@ class _MarketplacePageState extends State<MarketplacePage> {
     }
   }
 
-  /// Muestra la lista de solicitudes de servicio si la carga fue exitosa.
   Widget _buildMarketplaceContent(BuildContext context, MarketplaceProvider provider) {
     final requests = provider.serviceRequests;
 
     if (requests.isEmpty) {
       return Center(
-        child: Card(
-          elevation: 0,
-          color: AppColors.cardBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-            side: const BorderSide(color: AppColors.cardBorder, width: 1),
-          ),
-          margin: const EdgeInsets.all(16.0),
-          child: const Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Text(
-              'No hay trabajos disponibles en el Marketplace por ahora.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Inter', color: AppColors.textColor),
-            ),
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.work_outline, size: 60, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text("No hay trabajos disponibles.", style: TextStyle(color: Colors.grey[600])),
+          ],
         ),
       );
     }
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Trabajos Disponibles'),
-            const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(), // para que no haya doble scroll
-              itemCount: requests.length,
-              itemBuilder: (context, index) {
-                final request = requests[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: _buildServiceRequestCard(context, provider, request),
-                );
-              },
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Mis servicios",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Colors.black87,
+              fontFamily: 'Inter',
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+
+          // Filtros visuales (simulados por ahora para igualar diseño)
+          Row(
+            children: [
+              _buildFilterChip("Mis trabajos", false),
+              const SizedBox(width: 10),
+              _buildFilterChip("Disponibles", true), // Activo
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: requests.length,
+            separatorBuilder: (ctx, i) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              return _buildServiceRequestCard(context, provider, requests[index]);
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+  Widget _buildFilterChip(String label, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.white : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        border: isSelected ? Border.all(color: Colors.grey.shade200) : null,
+      ),
       child: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'Inter',
+        label,
+        style: TextStyle(
           fontWeight: FontWeight.bold,
-          fontSize: 22,
-          color: AppColors.title,
+          color: isSelected ? Colors.black87 : Colors.grey,
         ),
       ),
     );
   }
 
-  /// Construye una tarjeta para cada solicitud de servicio.
+  /// Tarjeta con diseño idéntico a la imagen (Barra lateral de color)
   Widget _buildServiceRequestCard(
       BuildContext context, MarketplaceProvider provider, ServiceRequestEntity request) {
 
-    // Asumimos que una solicitud es "pendiente" si su estado es 'pending'
-    final bool isPending = request.status.toLowerCase() == 'pending';
+    // 1. Determinar Color por Urgencia
+    Color statusColor;
+    switch (request.urgency.toLowerCase()) {
+      case 'critical':
+        statusColor = const Color(0xFFEF5350); // Rojo (como en la imagen)
+        break;
+      case 'high':
+        statusColor = Colors.orange;
+        break;
+      default:
+        statusColor = const Color(0xFF4CAF50); // Verde
+    }
 
-    return Card(
-      elevation: 2,
-      color: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: const BorderSide(color: AppColors.cardBorder, width: 1),
+    // 2. Formatear Fecha y Hora
+    // Si la fecha es hoy, ponemos "Hoy", sino la fecha corta
+    String dateText = "Fecha";
+    if (request.scheduledDate != null) {
+      final now = DateTime.now();
+      final diff = request.scheduledDate!.difference(now).inDays;
+      if (diff == 0 && request.scheduledDate!.day == now.day) {
+        dateText = "Hoy";
+      } else {
+        dateText = "${request.scheduledDate!.day}/${request.scheduledDate!.month}";
+      }
+    }
+    String timeText = request.timeSlot ?? "00:00";
+
+    // 3. Subtítulo (Reemplazo del nombre del cliente que no tenemos)
+    String subtitle = request.serviceType ?? "Cliente #${request.clientId}";
+
+    return Container(
+      height: 130, // Altura fija para que se vea uniforme
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.work_history, size: 30, color: AppColors.title),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    request.title,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: AppColors.textColor,
+      child: Row(
+        children: [
+          // --- BARRA LATERAL DE COLOR ---
+          Container(
+            width: 12,
+            decoration: BoxDecoration(
+              color: statusColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                bottomLeft: Radius.circular(20),
+              ),
+            ),
+          ),
+
+          // --- CONTENIDO ---
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // COLUMNA 1: Fecha y Hora
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(dateText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      Text(timeText, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    ],
+                  ),
+
+                  const SizedBox(width: 24), // Separación
+
+                  // COLUMNA 2: Info del Trabajo
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          request.title,
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, fontFamily: 'Inter'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle, // Aquí va el "Restaurante..." (o ServiceType)
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          request.serviceAddress ?? "Sin dirección",
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                // Icono de estado (opcional, si quieres un indicador visual)
-                Icon(
-                  isPending ? Icons.new_releases : Icons.check_circle,
-                  color: isPending ? Colors.orange : Colors.green,
-                  size: 24,
-                ),
-              ],
+                ],
+              ),
             ),
+          ),
 
-            const SizedBox(height: 24),
-            Row(
+          // --- BOTÓN ACEPTAR (Flotando a la derecha) ---
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
+                SizedBox(
+                  height: 32,
                   child: ElevatedButton(
-                    onPressed: (_isProcessing || !isPending)
-                        ? null // Deshabilita si está procesando o no es pendiente
+                    onPressed: _isProcessing
+                        ? null
                         : () => _showAcceptDialog(context, provider, request),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isPending ? Colors.green : Colors.grey,
-                      foregroundColor: AppColors.buttonLabel,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: const Color(0xFF0277BD), // Azul "Aceptar"
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
-                    child: const Text('Aceptar', style: TextStyle(fontSize: 16)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: (_isProcessing || !isPending) ? null : () {
-                      // TODO: Implementar lógica de "Denegar"
-                      // Podrías mostrar un diálogo de confirmación aquí también.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Funcionalidad "Denegar" no implementada aún.')),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPending ? Colors.red : Colors.grey,
-                      foregroundColor: AppColors.buttonLabel,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Denegar', style: TextStyle(fontSize: 16)),
+                    child: const Text("Aceptar", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          )
+        ],
       ),
     );
   }
 
-  /// Muestra un diálogo de confirmación para aceptar una solicitud de servicio.
-  void _showAcceptDialog(
-      BuildContext context, MarketplaceProvider provider, ServiceRequestEntity request) {
-    final rootContext = context; // Para usarlo después del 'await'
-
+  void _showAcceptDialog(BuildContext context, MarketplaceProvider provider, ServiceRequestEntity request) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Aceptar Solicitud de Servicio'),
-        content: Text('¿Estás seguro de que quieres aceptar el trabajo "${request.title}"?'),
+        title: const Text('Confirmar'),
+        content: Text('¿Aceptas el trabajo "${request.title}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancelar', style: TextStyle(color: AppColors.textColor)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: AppColors.buttonLabel,
-            ),
             onPressed: () async {
-              Navigator.pop(ctx); // Cierra el diálogo
-              setState(() => _isProcessing = true); // Bloquea los botones
-
-              final success = await provider.acceptServiceRequest(request.id);
-
-              if (success && mounted) {
-                // Si la operación fue exitosa, recarga los datos
-                await provider.loadMarketplaceData();
-              }
-
+              Navigator.pop(ctx);
+              setState(() => _isProcessing = true);
+              await provider.acceptServiceRequest(request.id);
               if (mounted) {
-                setState(() => _isProcessing = false); // Desbloquea los botones
-              }
-
-              if (rootContext.mounted) {
-                ScaffoldMessenger.of(rootContext)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        success
-                            ? '¡Solicitud "${request.title}" aceptada con éxito!'
-                            : 'Error al aceptar: ${provider.errorMessage}',
-                      ),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                    ),
-                  );
+                await provider.loadMarketplaceData();
+                setState(() => _isProcessing = false);
               }
             },
             child: const Text('Aceptar'),
