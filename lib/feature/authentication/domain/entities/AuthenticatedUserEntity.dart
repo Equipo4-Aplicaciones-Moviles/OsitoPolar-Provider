@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-
+import 'package:osito_polar_app/feature/provider-module/domain/entities/ProviderProfileEntity.dart';
 class AuthenticatedUserEntity extends Equatable {
   final int id;
   final String username;
@@ -21,7 +21,9 @@ class AuthenticatedUserEntity extends Equatable {
     this.requiresTwoFactorSetup = false,
     this.qrCodeDataUrl,
     this.manualEntryKey,
+
   });
+
 
   @override
   List<Object?> get props => [id, username, token, userType, profileId, requiresTwoFactorSetup, qrCodeDataUrl, manualEntryKey];

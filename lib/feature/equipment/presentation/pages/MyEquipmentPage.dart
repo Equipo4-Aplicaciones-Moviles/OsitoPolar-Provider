@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart';
+// import 'package:osito_polar_app/feature/provider-dashboard/presentation/widgets/ProviderDrawer.dart'; // Ya no se usa Drawer aquí
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 
@@ -32,22 +32,14 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Fondo gris claro
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.title),
-        title: const Text(
-          'Inventario',
-          style: TextStyle(
-            color: AppColors.logoColor,
-            fontWeight: FontWeight.w900,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
+
+      // --- CAMBIO: Quitamos el AppBar para un diseño más limpio ---
+      // appBar: AppBar(...),
+
+      // Usamos SafeArea para que el título no choque con la barra de notificaciones
+      body: SafeArea(
+        child: _buildBody(context, provider, state),
       ),
-      drawer: const ProviderDrawer(),
-      body: _buildBody(context, provider, state),
 
       floatingActionButton: FloatingActionButton(
         onPressed: _isProcessing
@@ -71,7 +63,16 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
       return const Center(child: CircularProgressIndicator(color: AppColors.primaryButton));
     }
     if (state == EquipmentState.error) {
-      return Center(child: Text('Error: ${provider.errorMessage}', style: const TextStyle(color: Colors.red)));
+      return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              'Error: ${provider.errorMessage}',
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+          )
+      );
     }
     return _buildDashboardContent(context, provider);
   }
@@ -80,18 +81,25 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- TÍTULO PRINCIPAL (Ahora es el único y se ve genial) ---
         const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+          padding: EdgeInsets.fromLTRB(20, 30, 20, 10), // Un poco más de padding arriba (30)
           child: Text(
             "Mis equipos",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black87, fontFamily: 'Inter'),
+            style: TextStyle(
+                fontSize: 28, // Un poco más grande para imponer presencia
+                fontWeight: FontWeight.w900,
+                color: Colors.black87,
+                fontFamily: 'Inter'
+            ),
           ),
         ),
+
         Expanded(
           child: provider.equipments.isEmpty
               ? _buildEmptyState()
               : ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             itemCount: provider.equipments.length,
             separatorBuilder: (ctx, i) => const SizedBox(height: 16),
             itemBuilder: (ctx, i) => _buildEquipmentCard(provider.equipments[i], provider),
@@ -103,7 +111,17 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Text("No tienes equipos registrados.", style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 60, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+              "No tienes equipos registrados.",
+              style: TextStyle(color: Colors.grey[600], fontSize: 16)
+          ),
+        ],
+      ),
     );
   }
 
@@ -114,14 +132,12 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     final bool isPublished = eq.isPublishedForRent;
     String priceText;
 
-    // Texto del precio (si no está publicado, mostramos 0 o guiones)
+    // Texto del precio
     if (isPublished) {
       if (eq.rentalInfo != null) {
-        // Si tenemos el objeto (ej. acabamos de publicar)
         priceText = "Alquiler: \$ ${eq.rentalInfo!.monthlyFee.toStringAsFixed(0)} / mes";
       } else {
-        // Si sabemos que está alquilado por el 'ownershipType', pero no tenemos el precio
-        priceText = "Publicado (Ver detalle para precio)";
+        priceText = "Publicado (Ver detalle)";
       }
     } else {
       priceText = "No publicado";
@@ -131,7 +147,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24), // Bordes muy redondos
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
@@ -142,10 +158,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           Container(
             width: 70, height: 70,
             decoration: BoxDecoration(
-              color: const Color(0xFF82C2F8), // Azul claro como la imagen
+              color: const Color(0xFF82C2F8),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.kitchen, color: Colors.white, size: 36), // Icono blanco sobre azul
+            child: const Icon(Icons.kitchen, color: Colors.white, size: 36),
           ),
 
           const SizedBox(width: 16),
@@ -155,33 +171,31 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nombre del Equipo
                 Text(
                   eq.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
 
-                // Precio
                 Text(
                   priceText,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
                 ),
                 const SizedBox(height: 8),
 
-                // CHIP "DISPONIBLE" (Verde)
+                // CHIP "DISPONIBLE"
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isPublished ? const Color(0xFFE0F2F1) : const Color(0xFFF5F5F5), // Verde claro o Gris
+                    color: isPublished ? const Color(0xFFE0F2F1) : const Color(0xFFF5F5F5),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     isPublished ? "Disponible" : "No Listado",
                     style: TextStyle(
-                      color: isPublished ? const Color(0xFF2E7D32) : Colors.grey, // Texto Verde o Gris
+                      color: isPublished ? const Color(0xFF2E7D32) : Colors.grey,
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
                     ),
@@ -193,18 +207,16 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
 
           // 3. SWITCH (Derecha)
           Transform.scale(
-            scale: 0.9, // Un poco más pequeño para que se vea elegante
+            scale: 0.9,
             child: Switch(
               value: isPublished,
-              activeColor: AppColors.primaryButton, // Azul cuando está ON
+              activeColor: AppColors.primaryButton,
               onChanged: _isProcessing
                   ? null
                   : (bool newValue) {
                 if (newValue) {
-                  // Si lo prende -> Publicar
                   _showPublishDialog(context, provider, eq);
                 } else {
-                  // Si lo apaga -> Ocultar
                   _showUnpublishDialog(context, provider, eq);
                 }
               },
@@ -222,27 +234,32 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Publicar Equipo'),
+        title: const Text('Publicar Equipo', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text("Ingresa el precio de alquiler mensual para activar este equipo en el mercado."),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             TextField(
               controller: priceController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Precio (USD)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.attach_money),
+              decoration: InputDecoration(
+                  labelText: 'Precio (USD)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.attach_money),
+                  filled: true,
+                  fillColor: Colors.grey.shade50
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryButton),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryButton,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+            ),
             onPressed: () async {
               final price = double.tryParse(priceController.text);
               if (price == null) return;
@@ -255,19 +272,14 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                 if (success) {
                   Fluttertoast.showToast(msg: "¡Equipo publicado!", backgroundColor: Colors.green);
                 } else {
-                  // SI FALLA, MIRAMOS EL ERROR
                   if (provider.errorMessage.contains("already rented") ||
                       provider.errorMessage.contains("cannot be published")) {
-
                     Fluttertoast.showToast(msg: "Actualizando estado...", backgroundColor: Colors.orange);
-                    // El equipo ya estaba publicado, pero la UI no lo sabía.
-                    // Al recargar, deberíamos intentar forzar la actualización.
                   } else {
                     Fluttertoast.showToast(msg: "Error: ${provider.errorMessage}", backgroundColor: Colors.red);
                   }
                 }
               } finally {
-                // SIEMPRE recargamos para sincronizar con la verdad del backend
                 if (mounted) await provider.loadEquipments();
                 if (mounted) setState(() => _isProcessing = false);
               }
@@ -283,12 +295,15 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ocultar Equipo'),
+        title: const Text('Ocultar Equipo', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('¿Deseas desactivar este equipo? Dejará de aparecer en el marketplace.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade400,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);

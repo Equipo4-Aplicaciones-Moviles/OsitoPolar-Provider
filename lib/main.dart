@@ -20,7 +20,7 @@ import 'package:osito_polar_app/feature/provider-dashboard/presentation/provider
 import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
-
+import 'package:osito_polar_app/feature/provider-module/presentation/providers/ProviderProfileProvider.dart';
 // --- PÁGINAS ---
 import 'package:osito_polar_app/feature/onboarding/presentation/screens/GetStartedScreen.dart';
 import 'package:osito_polar_app/feature/onboarding/presentation/screens/SelectProfileScreen.dart'; // Asegúrate que este archivo acepte los callbacks
@@ -64,6 +64,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => sl<MarketplaceProvider>()),
         ChangeNotifierProvider(create: (_) => sl<TechnicianProvider>()),
         ChangeNotifierProvider(create: (_) => sl<TechnicianDetailProvider>()),
+        ChangeNotifierProvider(create: (_) => ProviderProfileProvider()),
       ],
       child: const MyApp(),
     ),
@@ -222,7 +223,7 @@ class _MyAppState extends State<MyApp> {
             final args = settings.arguments as int?;
             return MaterialPageRoute(builder: (context) => ProviderRegisterPage(
               planId: args, // Se lo pasamos al registro
-              onSignInClicked: () => Navigator.pop(context),
+              onSignInClicked: () => Navigator.pushNamed(context, AppRoute.providerLogin),
             ));
 
         // --- PROVIDER MODULE ---
