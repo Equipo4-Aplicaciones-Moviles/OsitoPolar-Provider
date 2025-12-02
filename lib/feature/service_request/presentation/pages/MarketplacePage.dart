@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
- // Para formatear fechas si es necesario
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-// --- Providers y Entidades ---
+
+// Providers y Entidades
 import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 import 'package:osito_polar_app/feature/service_request/domain/entities/ServiceRequestEntity.dart';
+// Importamos Auth para saber QUIÉNES somos (nuestro ID)
+import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -15,6 +17,7 @@ class MarketplacePage extends StatefulWidget {
 
 class _MarketplacePageState extends State<MarketplacePage> {
   bool _isProcessing = false;
+  bool _showAvailable = true; // Simulación del filtro
 
   @override
   void initState() {
@@ -46,10 +49,14 @@ class _MarketplacePageState extends State<MarketplacePage> {
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(20.0),
-            child: Text(
-              'Error: ${provider.errorMessage}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red, fontFamily: 'Inter'),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 10),
+                Text('Error: ${provider.errorMessage}', textAlign: TextAlign.center),
+                TextButton(onPressed: () => provider.loadMarketplaceData(), child: const Text("Reintentar"))
+              ],
             ),
           ),
         );
@@ -59,7 +66,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
   }
 
   Widget _buildMarketplaceContent(BuildContext context, MarketplaceProvider provider) {
-    final requests = provider.serviceRequests;
+    // Lista simulada para esta versión de rollback
+    final requests = provider.serviceRequests;// Usamos availableRequests (la lista completa del Provider)
 
     if (requests.isEmpty) {
       return Center(
@@ -93,9 +101,9 @@ class _MarketplacePageState extends State<MarketplacePage> {
           // Filtros visuales (simulados por ahora para igualar diseño)
           Row(
             children: [
-              _buildFilterChip("Mis trabajos", false),
+              _buildFilterChip("Mis trabajos", !_showAvailable, () => setState(() => _showAvailable = false)),
               const SizedBox(width: 10),
-              _buildFilterChip("Disponibles", true), // Activo
+              _buildFilterChip("Disponibles", _showAvailable, () => setState(() => _showAvailable = true)), // Activo
             ],
           ),
           const SizedBox(height: 20),
@@ -114,19 +122,26 @@ class _MarketplacePageState extends State<MarketplacePage> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: isSelected ? Border.all(color: Colors.grey.shade200) : null,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.black87 : Colors.grey,
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black87 : Colors.white, // Negro si activo, Blanco si inactivo
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected ? null : Border.all(color: Colors.grey.shade300),
+          boxShadow: isSelected
+              ? [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.grey[600],
+          ),
         ),
       ),
     );
@@ -140,7 +155,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     Color statusColor;
     switch (request.urgency.toLowerCase()) {
       case 'critical':
-        statusColor = const Color(0xFFEF5350); // Rojo (como en la imagen)
+        statusColor = const Color(0xFFEF5350); // Rojo
         break;
       case 'high':
         statusColor = Colors.orange;
@@ -150,7 +165,6 @@ class _MarketplacePageState extends State<MarketplacePage> {
     }
 
     // 2. Formatear Fecha y Hora
-    // Si la fecha es hoy, ponemos "Hoy", sino la fecha corta
     String dateText = "Fecha";
     if (request.scheduledDate != null) {
       final now = DateTime.now();
@@ -162,15 +176,15 @@ class _MarketplacePageState extends State<MarketplacePage> {
       }
     }
     String timeText = request.timeSlot ?? "00:00";
-
-    // 3. Subtítulo (Reemplazo del nombre del cliente que no tenemos)
     String subtitle = request.serviceType ?? "Cliente #${request.clientId}";
 
+    // isMyJob es true cuando estamos en la pestaña "Mis trabajos" (usado para el botón)
+    final isMyJob = !_showAvailable;
+
     return Container(
-      height: 130, // Altura fija para que se vea uniforme
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -179,122 +193,192 @@ class _MarketplacePageState extends State<MarketplacePage> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // --- BARRA LATERAL DE COLOR ---
-          Container(
-            width: 12,
-            decoration: BoxDecoration(
-              color: statusColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-              ),
-            ),
-          ),
-
-          // --- CONTENIDO ---
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // COLUMNA 1: Fecha y Hora
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(dateText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      const SizedBox(height: 8),
-                      Text(timeText, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                    ],
-                  ),
-
-                  const SizedBox(width: 24), // Separación
-
-                  // COLUMNA 2: Info del Trabajo
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          request.title,
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, fontFamily: 'Inter'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle, // Aquí va el "Restaurante..." (o ServiceType)
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          request.serviceAddress ?? "Sin dirección",
-                          style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // --- BOTÓN ACEPTAR (Flotando a la derecha) ---
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  height: 32,
-                  child: ElevatedButton(
-                    onPressed: _isProcessing
-                        ? null
-                        : () => _showAcceptDialog(context, provider, request),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0277BD), // Azul "Aceptar"
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                    child: const Text("Aceptar", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
+      // Usamos IntrinsicHeight y Row(crossAxisAlignment: CrossAxisAlignment.stretch)
+      // para que la barra lateral crezca con el contenido.
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // --- BARRA LATERAL DE COLOR ---
+            Container(
+              width: 6,
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
                 ),
-              ],
+              ),
             ),
-          )
-        ],
+
+            // --- CONTENIDO PRINCIPAL ---
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // COLUMNA 1: Fecha y Hora (El ancho fijo ayuda a que el texto no desborde)
+                    SizedBox(
+                      width: 65, // Ancho fijo para "Hoy" y "14:00"
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(dateText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text(timeText, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+
+                    // Separación
+                    const SizedBox(width: 16),
+
+                    // COLUMNA 2: Info del Trabajo y Botón
+                    Expanded( // Usamos Expanded para tomar el espacio restante
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Título y Subtítulo
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      request.title,
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, fontFamily: 'Inter'),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      subtitle,
+                                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                ),
+                              ),
+                              // Botón Aceptar/Detalle
+                              SizedBox(
+                                height: 32, // Altura fija
+                                child: _buildActionButton(isMyJob, provider, request),
+                              ),
+                            ],
+                          ),
+
+                          // Dirección (Va abajo de la fila del botón)
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on, size: 12, color: Colors.grey[400]),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                    request.serviceAddress ?? "Sin dirección",
+                                    style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  // Widget separado para manejar la lógica del botón Aceptar/Detalle
+  Widget _buildActionButton(bool isMyJob, MarketplaceProvider provider, ServiceRequestEntity request) {
+    if (!isMyJob) {
+      return ElevatedButton(
+        onPressed: _isProcessing
+            ? null
+            : () => _showAcceptDialog(context, provider, request),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryButton,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        child: const Text("Aceptar", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      );
+    } else {
+      return OutlinedButton(
+        onPressed: () {
+          // Navegar a la pantalla de detalle de Work Order
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Navegar a detalle de trabajo"))
+          );
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryButton,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          side: const BorderSide(color: AppColors.primaryButton),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        child: const Text("Detalle", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      );
+    }
+  }
+
   void _showAcceptDialog(BuildContext context, MarketplaceProvider provider, ServiceRequestEntity request) {
+    // Capturamos el Messenger ANTES de cualquier async
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar'),
-        content: Text('¿Aceptas el trabajo "${request.title}"?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isProcessing = true);
-              await provider.acceptServiceRequest(request.id);
-              if (mounted) {
-                await provider.loadMarketplaceData();
-                setState(() => _isProcessing = false);
-              }
-            },
-            child: const Text('Aceptar'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Confirmar Trabajo'),
+          content: Text('¿Estás seguro de que quieres aceptar el trabajo "${request.title}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryButton),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                setState(() => _isProcessing = true);
+
+                final success = await provider.acceptServiceRequest(request.id);
+
+                if (success) {
+                  scaffoldMessenger.showSnackBar(
+                      const SnackBar(content: Text("¡Trabajo aceptado con éxito!"), backgroundColor: Colors.green)
+                  );
+                  // Mover a "Mis trabajos" localmente
+                  if (mounted) setState(() => _showAvailable = false);
+                } else {
+                  scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text("Error: ${provider.errorMessage}"), backgroundColor: Colors.red)
+                  );
+                  // Si falla, debemos recargar los datos para sincronizar con el servidor
+                  if (mounted) provider.loadMarketplaceData();
+                }
+
+                if (mounted) setState(() => _isProcessing = false);
+              },
+              child: const Text('Aceptar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 }
