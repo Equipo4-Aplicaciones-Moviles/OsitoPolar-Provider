@@ -56,6 +56,8 @@ import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnician
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
 
+import '../../feature/equipment/domain/usecases/GetEquipmentHealthUseCase.dart';
+
 
 final sl = GetIt.instance;
 
@@ -103,13 +105,17 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => UpdateEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => PublishEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => UnpublishEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => GetEquipmentHealthUseCase(sl()));
 
   sl.registerFactory(() => AddEquipmentProvider(
     createEquipmentUseCase: sl(),
     updateEquipmentUseCase: sl(),
     getEquipmentByIdUseCase: sl(),
   ));
-  sl.registerFactory(() => EquipmentDetailProvider(getEquipmentByIdUseCase: sl()));
+  sl.registerFactory(() => EquipmentDetailProvider(
+    getEquipmentByIdUseCase: sl(),
+    getEquipmentHealthUseCase: sl(), // <--- ¡AGREGAR ESTO!
+  ));
 
   sl.registerFactory(() => EquipmentProvider(
     getEquipmentsUseCase: sl(),

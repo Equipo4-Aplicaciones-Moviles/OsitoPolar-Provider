@@ -10,6 +10,8 @@ import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dar
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentRepository.dart';
 
+import '../../domain/entities/EquipmentHealthEntity.dart';
+
 class EquipmentRepositoryImpl implements EquipmentRepository {
   final EquipmentRemoteDataSource remoteDataSource;
   final SharedPreferences prefs;
@@ -181,6 +183,32 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));
     } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+
+  @override
+  Future<Either<Failure, EquipmentHealthEntity>> getEquipmentHealth({
+    required int equipmentId,
+    required int days,
+  }) async {
+    try {
+      // 1. Llama al DataSource que ya construye la URL y maneja el token
+      final healthModel = await remoteDataSource.getEquipmentHealth(
+        equipmentId: equipmentId,
+        days: days,
+      );
+
+      // 2. Éxito: Retorna el modelo que hereda de la entidad.
+      return Right(healthModel);
+
+    } on ServerException catch (e) {
+      // 3. Captura el error específico del servidor
+      return Left(ServerFailure(message: e.message));
+
+    } on Exception catch (e) {
+      // 4. Captura cualquier otro error (Red, Parseo, NotFound, etc.)
       return Left(ServerFailure(message: e.toString()));
     }
   }

@@ -1,5 +1,7 @@
 import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
+
+import '../models/EquipmentHealthModel.dart';
 /// Interfaz (Contrato) para la fuente de datos remota de Equipos.
 abstract class EquipmentRemoteDataSource {
   /// Llama al endpoint GET /api/v1/equipments
@@ -29,6 +31,11 @@ abstract class EquipmentRemoteDataSource {
   /// Llama a: DELETE /api/v1/equipments/{id}/rental
   Future<EquipmentModel> unpublishEquipment({
     required int equipmentId,
+  });
+
+  Future<EquipmentHealthModel> getEquipmentHealth({
+    required int equipmentId,
+    required int days,
   });
 
 // TODO: Añadir métodos para getEquipmentById, createEquipment, etc.

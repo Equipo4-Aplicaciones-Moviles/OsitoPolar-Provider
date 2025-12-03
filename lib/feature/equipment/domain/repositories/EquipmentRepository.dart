@@ -2,6 +2,8 @@ import 'package:dartz/dartz.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 
+import '../entities/EquipmentHealthEntity.dart';
+
 /// El "CONTRATO" (Interfaz) para el Repositorio de Equipos.
 abstract class EquipmentRepository {
   /// Obtiene la lista de equipos del 'Provider' (Empresa)
@@ -28,5 +30,10 @@ abstract class EquipmentRepository {
   /// Llama a DELETE /api/v1/equipments/{id}/rental
   Future<Either<Failure, EquipmentEntity>> unpublishEquipment({
     required int equipmentId,
+  });
+
+  Future<Either<Failure, EquipmentHealthEntity>> getEquipmentHealth({
+    required int equipmentId,
+    required int days,
   });
 }

@@ -33,15 +33,14 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Fondo gris claro
 
-      // --- CAMBIO: Quitamos el AppBar para un diseño más limpio ---
-      // appBar: AppBar(...),
-
       // Usamos SafeArea para que el título no choque con la barra de notificaciones
       body: SafeArea(
         child: _buildBody(context, provider, state),
       ),
 
       floatingActionButton: FloatingActionButton(
+        // Tag único para evitar conflicto con el FAB del Dashboard si están en IndexedStack
+        heroTag: 'addEquipmentTag',
         onPressed: _isProcessing
             ? null
             : () async {
@@ -81,13 +80,13 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- TÍTULO PRINCIPAL (Ahora es el único y se ve genial) ---
+        // --- TÍTULO PRINCIPAL ---
         const Padding(
-          padding: EdgeInsets.fromLTRB(20, 30, 20, 10), // Un poco más de padding arriba (30)
+          padding: EdgeInsets.fromLTRB(20, 30, 20, 10),
           child: Text(
             "Mis equipos",
             style: TextStyle(
-                fontSize: 28, // Un poco más grande para imponer presencia
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
                 color: Colors.black87,
                 fontFamily: 'Inter'
@@ -125,7 +124,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     );
   }
 
-  // --- TARJETA IDÉNTICA A LA IMAGEN ---
+  // --- TARJETA IDÉNTICA A LA IMAGEN CON NAVEGACIÓN ---
   Widget _buildEquipmentCard(EquipmentEntity eq, EquipmentProvider provider) {
 
     // Estado: ¿Está publicado?
@@ -143,8 +142,8 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
       priceText = "No publicado";
     }
 
+    // Usamos Container + Material + InkWell para dar efecto de clic sin perder el estilo
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -152,77 +151,96 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
-      child: Row(
-        children: [
-          // 1. ICONO AZUL (Izquierda)
-          Container(
-            width: 70, height: 70,
-            decoration: BoxDecoration(
-              color: const Color(0xFF82C2F8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.kitchen, color: Colors.white, size: 36),
-          ),
-
-          const SizedBox(width: 16),
-
-          // 2. DATOS (Centro)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () {
+            // --- NAVEGACIÓN AL DETALLE ---
+            // Pasamos el ID del equipo como argumento
+            Navigator.pushNamed(
+                context,
+                '/provider_equipment_detail',
+                arguments: eq.id
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                Text(
-                  eq.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-
-                Text(
-                  priceText,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
-                ),
-                const SizedBox(height: 8),
-
-                // CHIP "DISPONIBLE"
+                // 1. ICONO AZUL (Izquierda)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  width: 70, height: 70,
                   decoration: BoxDecoration(
-                    color: isPublished ? const Color(0xFFE0F2F1) : const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFF82C2F8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(
-                    isPublished ? "Disponible" : "No Listado",
-                    style: TextStyle(
-                      color: isPublished ? const Color(0xFF2E7D32) : Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
+                  child: const Icon(Icons.kitchen, color: Colors.white, size: 36),
+                ),
+
+                const SizedBox(width: 16),
+
+                // 2. DATOS (Centro)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        eq.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+
+                      Text(
+                        priceText,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // CHIP "DISPONIBLE"
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isPublished ? const Color(0xFFE0F2F1) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isPublished ? "Disponible" : "No Listado",
+                          style: TextStyle(
+                            color: isPublished ? const Color(0xFF2E7D32) : Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3. SWITCH (Derecha)
+                Transform.scale(
+                  scale: 0.9,
+                  child: Switch(
+                    value: isPublished,
+                    activeColor: AppColors.primaryButton,
+                    onChanged: _isProcessing
+                        ? null
+                        : (bool newValue) {
+                      if (newValue) {
+                        _showPublishDialog(context, provider, eq);
+                      } else {
+                        _showUnpublishDialog(context, provider, eq);
+                      }
+                    },
                   ),
                 ),
               ],
             ),
           ),
-
-          // 3. SWITCH (Derecha)
-          Transform.scale(
-            scale: 0.9,
-            child: Switch(
-              value: isPublished,
-              activeColor: AppColors.primaryButton,
-              onChanged: _isProcessing
-                  ? null
-                  : (bool newValue) {
-                if (newValue) {
-                  _showPublishDialog(context, provider, eq);
-                } else {
-                  _showUnpublishDialog(context, provider, eq);
-                }
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

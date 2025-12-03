@@ -24,7 +24,7 @@ import 'package:osito_polar_app/feature/provider-module/presentation/providers/P
 // --- PÁGINAS ---
 import 'package:osito_polar_app/feature/onboarding/presentation/screens/GetStartedScreen.dart';
 import 'package:osito_polar_app/feature/onboarding/presentation/screens/SelectProfileScreen.dart'; // Asegúrate que este archivo acepte los callbacks
-
+import 'package:osito_polar_app/feature/equipment/presentation/pages/ProviderEquipmentDetailPage.dart';
 // Auth Pages
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientLoginPage.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientRegisterPage.dart';

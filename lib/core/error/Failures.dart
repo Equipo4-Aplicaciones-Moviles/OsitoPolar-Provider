@@ -26,3 +26,11 @@ class NetworkFailure extends Failure {
 class CacheFailure extends Failure {
   const CacheFailure({String? message}) : super(message: message);
 }
+
+class NotFoundFailure extends Failure {
+  final String? message;
+  const NotFoundFailure({this.message});
+
+  @override
+  List<Object?> get props => [message];
+}

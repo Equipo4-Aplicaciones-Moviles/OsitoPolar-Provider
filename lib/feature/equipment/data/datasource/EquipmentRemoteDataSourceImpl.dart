@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:osito_polar_app/core/error/Exceptions.dart'; // ¡Importante para ServerException!
 import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
+import '../models/EquipmentHealthModel.dart';
 import 'EquipmentRemoteDataSource.dart';
 
 class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
@@ -299,6 +300,42 @@ class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
           message: 'Error al ocultar equipo: ${response.statusCode}');
     } catch (e) {
       print('Error de red en unpublish: $e');
+      throw ServerException(message: 'No se pudo conectar al servidor.');
+    }
+  }
+
+  @override
+  Future<EquipmentHealthModel> getEquipmentHealth({
+    required int equipmentId,
+    required int days,
+  }) async {
+    final token = prefs.getString('auth_token');
+    if (token == null) throw ServerException(message: 'Token no encontrado');
+
+    // CONSTRUCCIÓN DE LA URL
+    // Endpoint: /api/v1/analytics/equipments/{equipmentId}/health?days={days}
+    final url = Uri.parse('$baseUrl/api/v1/analytics/equipments/$equipmentId/health?days=$days');
+    print('Llamando a API (Health Check): $url');
+
+    try {
+      final response = await client.get( // Usamos la variable 'client' inyectada
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Incluimos el token
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Usamos el modelo EquipmentHealthModel que ya creamos.
+        return EquipmentHealthModel.fromJson(response.body);
+      } else if (response.statusCode == 404) {
+        throw ServerException(message: 'Reporte de salud no encontrado (404)');
+      } else {
+        throw ServerException(message: 'Error al obtener métricas de salud: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error de red en getEquipmentHealth: $e');
       throw ServerException(message: 'No se pudo conectar al servidor.');
     }
   }
