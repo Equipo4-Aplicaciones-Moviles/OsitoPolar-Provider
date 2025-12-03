@@ -31,9 +31,17 @@ class GetStartedScreen extends StatelessWidget {
 
                 Center(
                   child: Image.asset(
-                    'assets/images/osito_polar_welcome.png',
+                    'assets/images/osito_polar_welcome.png', // Asegúrate de tener esta imagen o usa un Icono grande
                     height: 300,
                     fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback si no hay imagen
+                      return const Icon(
+                        Icons.ac_unit_rounded,
+                        size: 150,
+                        color: AppColors.primaryButton,
+                      );
+                    },
                   ),
                 ),
 
@@ -47,6 +55,7 @@ class GetStartedScreen extends StatelessWidget {
                     color: AppColors.textBlack,
                     height: 1.1,
                     letterSpacing: -0.5,
+                    fontFamily: 'Inter',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -57,14 +66,16 @@ class GetStartedScreen extends StatelessWidget {
                     fontSize: 16,
                     color: Color(0xFF404040),
                     height: 1.5,
+                    fontFamily: 'Inter',
                   ),
                 ),
                 const SizedBox(height: 40),
 
                 OsitoButton(
-                  text: 'Get started',
+                  text: 'Comenzar',
                   onPressed: () {
-                    Navigator.pushNamed(context, AppRoute.selectProfile);
+                    // CAMBIO: Navegar directo al login de proveedor
+                    Navigator.pushNamed(context, AppRoute.providerLogin);
                   },
                 ),
                 const SizedBox(height: 10),

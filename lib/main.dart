@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/TwoFactorSetUpPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/TwoFactorVerificationPage.dart';
 import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart';
 
@@ -185,15 +187,12 @@ class _MyAppState extends State<MyApp> {
             return MaterialPageRoute(builder: (context) => const GetStartedScreen());
 
           case AppRoute.selectProfile:
-            return MaterialPageRoute(
-              builder: (context) => SelectProfileScreen(
-                // 1. Si es Cliente -> Login Normal
-                onClientClicked: () => Navigator.pushNamed(context, AppRoute.clientLogin),
-
-                // 2. Si es Empresa -> Primero va a SELECCIONAR PLAN
-                onProviderClicked: () => Navigator.pushNamed(context, '/select_plan'),
-              ),
-            );
+          // *** CAMBIO: Redirección directa a Provider Login ***
+          // Saltamos la pantalla de selección "Cliente vs Empresa"
+            return MaterialPageRoute(builder: (context) => ProviderLoginPage(
+              onRegisterClicked: () => Navigator.pushNamed(context, '/select_plan'),
+              onForgotPasswordClicked: () {},
+            ));
 
         // --- NUEVA RUTA: SELECCIÓN DE PLAN ---
           case '/select_plan':
@@ -218,6 +217,14 @@ class _MyAppState extends State<MyApp> {
               onForgotPasswordClicked: () {},
             ));
 
+          case '/2fa_verify':
+            return MaterialPageRoute(builder: (context) => const TwoFactorVerificationPage());
+
+          case '/2fa_setup':
+          // Usamos la misma página para setup/verificación por ahora o puedes separarlas
+            return MaterialPageRoute(builder: (context) => const TwoFactorVerificationPage());
+
+
           case AppRoute.providerRegister:
           // 3. RECIBIMOS EL ARGUMENTO DEL PLAN
             final args = settings.arguments as int?;
@@ -232,6 +239,16 @@ class _MyAppState extends State<MyApp> {
 
           case '/provider_my_equipments':
             return MaterialPageRoute(builder: (context) => const MyEquipmentPage());
+
+          case '/provider_equipment_detail':
+            final args = settings.arguments;
+            if (args is int) {
+              return MaterialPageRoute(
+                builder: (context) => ProviderEquipmentDetailPage(equipmentId: args),
+              );
+            }
+            return MaterialPageRoute(builder: (context) => const Scaffold(body: Center(child: Text("ID Inválido"))));
+
 
           case '/provider_marketplace':
             return MaterialPageRoute(builder: (context) => const MarketplacePage());

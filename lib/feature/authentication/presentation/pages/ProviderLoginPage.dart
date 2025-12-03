@@ -45,9 +45,10 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
         Navigator.pushNamedAndRemoveUntil(
             context, '/provider_home', (route) => false);
       }
-      // CASO B: Requiere 2FA (No tiene token aún) -> Ir a pantalla de QR
+      // CASO B: Requiere 2FA -> Ir a pantalla de Verificación
       else if (state == LoginState.requires2FA) {
-        Navigator.pushNamed(context, '/2fa_setup');
+        // CAMBIO: Usamos la ruta de verificación explícita
+        Navigator.pushNamed(context, '/2fa_verify');
       }
 
     });
@@ -62,7 +63,7 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
             height: double.infinity,
             width: double.infinity,
           ),
-          // Capa 2: Degradado suave (TU DISEÑO)
+          // Capa 2: Degradado suave
           Opacity(
             opacity: 0.3,
             child: Container(
@@ -89,6 +90,17 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // LOGO (Opcional también aquí si quieres consistencia)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primaryButton.withOpacity(0.1),
+                      ),
+                      child: const Icon(Icons.ac_unit_rounded, size: 40, color: AppColors.primaryButton),
+                    ),
+                    const SizedBox(height: 20),
+
                     const Text(
                       '¡Bienvenido de vuelta!',
                       textAlign: TextAlign.center,
@@ -102,7 +114,7 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Inicia sesión en tu cuenta',
+                      'Inicia sesión en tu cuenta de Proveedor',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,
@@ -135,7 +147,7 @@ class _ProviderLoginPageState extends State<ProviderLoginPage> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _usernameController,
-                      hintText: 'Oliver09',
+                      hintText: 'Ej. Oliver09',
                       isEnabled: !isLoading,
                     ),
 

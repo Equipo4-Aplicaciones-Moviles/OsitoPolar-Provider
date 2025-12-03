@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/SignInUseCase.dart';
-// Asegúrate de que la ruta a VerifyTwoFactorUseCase sea correcta
 import 'package:osito_polar_app/feature/authentication/domain/usecases/VerifyTwoFactorUseCase.dart';
 
 enum LoginState {
@@ -45,6 +44,7 @@ class ProviderLoginProvider extends ChangeNotifier {
 
   // --- LÓGICA: LOGIN ---
   Future<void> signIn(String username, String password) async {
+    print("🔵 Provider: Iniciando login para $username...");
     _state = LoginState.loading;
     notifyListeners();
 
@@ -52,25 +52,33 @@ class ProviderLoginProvider extends ChangeNotifier {
 
     failureOrUser.fold(
           (failure) {
+        print("🔴 Provider: Error en login -> $failure");
         _errorMessage = _mapFailureToMessage(failure);
         _state = LoginState.error;
       },
           (user) {
-        // CASO 1: Requiere configurar 2FA
+        print("🟢 Provider: API respondió Éxito.");
+        print("   -> Usuario: ${user.username}");
+        print("   -> Requiere 2FA: ${user.requiresTwoFactorSetup}");
+        print("   -> Token: ${user.token != null ? 'SÍ' : 'NO'}");
+
+        // CASO 1: Requiere configurar 2FA o Verificarlo
         if (user.requiresTwoFactorSetup) {
+          print("⚠️ Provider: Detectado requerimiento de 2FA. Cambiando estado a requires2FA.");
           _tempQrCode = user.qrCodeDataUrl;
           _tempSecret = user.manualEntryKey;
           _tempUsername = user.username;
-          _state = LoginState.requires2FA;
+          _state = LoginState.requires2FA; // <-- ESTO DISPARA LA NAVEGACIÓN
         }
         // CASO 2: Login directo (tiene token)
         else if (user.token != null && user.token!.isNotEmpty) {
+          print("✅ Provider: Login directo. Guardando usuario y cambiando estado a success.");
           _user = user;
-          // ¡Aquí llamamos al método corregido!
           _saveUserToPrefs(user);
           _state = LoginState.success;
         }
         else {
+          print("❓ Provider: Respuesta extraña (sin 2FA y sin Token).");
           _errorMessage = "Respuesta desconocida del servidor.";
           _state = LoginState.error;
         }
@@ -103,7 +111,6 @@ class ProviderLoginProvider extends ChangeNotifier {
           (user) {
         // ¡Éxito! Tenemos el usuario completo con token
         _user = user;
-        // ¡Aquí llamamos al método corregido!
         _saveUserToPrefs(user);
         _state = LoginState.success;
       },
@@ -127,8 +134,6 @@ class ProviderLoginProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- ¡MÉTODO CORREGIDO Y COMPLETO! ---
-  // Antes solo guardabas el token, ahora guardamos todo el perfil
   Future<void> _saveUserToPrefs(AuthenticatedUserEntity user) async {
     if (user.token != null) {
       await prefs.setString('auth_token', user.token!);
