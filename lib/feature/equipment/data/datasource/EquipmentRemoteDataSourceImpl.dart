@@ -8,6 +8,8 @@ import 'package:osito_polar_app/core/error/Exceptions.dart'; // ¡Importante par
 import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
 import '../models/EquipmentHealthModel.dart';
+import '../models/EquipmentOperationModel.dart';
+import '../models/EquipmentReadingModel.dart';
 import 'EquipmentRemoteDataSource.dart';
 
 class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
@@ -337,6 +339,81 @@ class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
     } catch (e) {
       print('Error de red en getEquipmentHealth: $e');
       throw ServerException(message: 'No se pudo conectar al servidor.');
+    }
+  }
+
+  @override
+  Future<List<EquipmentReadingModel>> getEquipmentReadings({
+    required int equipmentId,
+    required int hours,
+  }) async {
+    final token = prefs.getString('auth_token');
+    if (token == null) throw ServerException(message: 'Token no encontrado');
+
+    // Endpoint: /api/v1/analytics/equipments/{id}/readings?hours={hours}
+    final url = Uri.parse('$baseUrl/api/v1/analytics/equipments/$equipmentId/readings?hours=$hours');
+
+    print('Llamando a API (Readings): $url');
+
+    try {
+      final response = await client.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // La API devuelve un objeto UnifiedReadingResponse: { "data": [...], "total": ... }
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Extraemos la lista de la propiedad 'data'
+        final List<dynamic> dataList = jsonResponse['data'] ?? [];
+
+        // Usamos el método estático del modelo para convertir la lista
+        return EquipmentReadingModel.listFromMap(dataList);
+      } else {
+        print("Error API Readings: ${response.statusCode} - ${response.body}");
+        throw ServerException(message: 'Error al obtener lecturas: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Excepción en getEquipmentReadings: $e");
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  Future<EquipmentModel> updateEquipmentOperations({
+    required int equipmentId,
+    required EquipmentOperationModel operations,
+  }) async {
+    final token = prefs.getString('auth_token');
+    if (token == null) throw ServerException(message: 'Token no encontrado');
+
+    // Endpoint: PATCH /api/v1/equipments/{id}/operations
+    final url = Uri.parse('$baseUrl/api/v1/equipments/$equipmentId/operations');
+    print('Llamando a API (Operations): $url con temp=${operations.temperature}');
+
+    try {
+      final response = await client.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(operations.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        // Retorna el equipo actualizado
+        return EquipmentModel.fromJson(response.body);
+      } else {
+        print("Error API Operations: ${response.statusCode} - ${response.body}");
+        throw ServerException(message: 'Error al actualizar operaciones: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Excepción en updateEquipmentOperations: $e");
+      throw ServerException(message: e.toString());
     }
   }
 }

@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 // Imports de Rental Info
 import 'package:osito_polar_app/feature/equipment/data/models/RentalInfoModel.dart';
-import 'package:osito_polar_app/feature/equipment/domain/entities/RentalInfoEntity.dart';
 
 class EquipmentModel extends EquipmentEntity {
 
@@ -14,6 +13,10 @@ class EquipmentModel extends EquipmentEntity {
     required super.serialNumber,
     required super.status,
     required super.currentTemperature,
+    // Campos nuevos pasados al super
+    super.setTemperature,
+    super.isPoweredOn = false,
+
     required super.ownerId,
     required super.locationName,
     required super.code,
@@ -24,11 +27,8 @@ class EquipmentModel extends EquipmentEntity {
     required super.ownershipType,
     required super.cost,
     super.rentalInfo,
-
-
   });
 
-  // --- ¡MÉTODO RESTAURADO! ---
   factory EquipmentModel.empty() {
     return const EquipmentModel(
       id: 0,
@@ -38,6 +38,8 @@ class EquipmentModel extends EquipmentEntity {
       serialNumber: '',
       status: 'inactive',
       currentTemperature: 0.0,
+      setTemperature: 0.0,
+      isPoweredOn: false,
       ownerId: 0,
       locationName: '',
       code: '',
@@ -47,18 +49,14 @@ class EquipmentModel extends EquipmentEntity {
       notes: '',
       ownershipType: 'Owned',
       cost: 0.0,
-      rentalInfo: null, // Por defecto, no tiene info de alquiler
+      rentalInfo: null,
     );
   }
-  // ---------------------------
 
   factory EquipmentModel.fromJson(String str) =>
       EquipmentModel.fromMap(json.decode(str));
 
   factory EquipmentModel.fromMap(Map<String, dynamic> json) {
-
-    print("Parseando equipo: ${json['name']}");
-    print("Raw rentalInfo: ${json['rentalInfo']}");
 
     // Lógica para leer rentalInfo
     RentalInfoModel? rentalData;
@@ -74,6 +72,11 @@ class EquipmentModel extends EquipmentEntity {
       serialNumber: json['serialNumber'] ?? 'N/A',
       status: json['status'] ?? 'Desconocido',
       currentTemperature: (json['currentTemperature'] as num?)?.toDouble() ?? 0.0,
+
+      // --- MAPEO DE CAMPOS NUEVOS ---
+      setTemperature: (json['setTemperature'] as num?)?.toDouble(),
+      isPoweredOn: json['isPoweredOn'] ?? false,
+
       ownerId: json['ownerId'] ?? 0,
       locationName: json['locationName'] ?? 'Ubicación desconocida',
       code: json['code'] ?? 'N/A',
@@ -83,12 +86,11 @@ class EquipmentModel extends EquipmentEntity {
       notes: json['notes'] ?? 'N/A',
       ownershipType: json['ownershipType'] ?? 'Owned',
       cost: (json['cost'] as num?)?.toDouble() ?? 0.0,
-      rentalInfo: rentalData, // Asignamos la info de alquiler
-
+      rentalInfo: rentalData,
     );
   }
 
-  EquipmentEntity toEntity() => this; // Como heredamos, devolvemos 'this'
+  EquipmentEntity toEntity() => this;
 
   static List<EquipmentModel> listFromMap(List<dynamic> list) =>
       List<EquipmentModel>.from(list.map((x) => EquipmentModel.fromMap(x)));

@@ -11,6 +11,8 @@ import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntit
 import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentRepository.dart';
 
 import '../../domain/entities/EquipmentHealthEntity.dart';
+import '../../domain/entities/EquipmentReadingEntity.dart';
+import '../models/EquipmentOperationModel.dart';
 
 class EquipmentRepositoryImpl implements EquipmentRepository {
   final EquipmentRemoteDataSource remoteDataSource;
@@ -209,6 +211,45 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
 
     } on Exception catch (e) {
       // 4. Captura cualquier otro error (Red, Parseo, NotFound, etc.)
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<EquipmentReadingEntity>>> getEquipmentReadings({
+    required int equipmentId,
+    required int hours,
+  }) async {
+    // ... Implementación de lecturas (si la agregaste en el DataSource) ...
+    throw UnimplementedError();
+  }
+
+  // --- ¡AQUÍ ESTÁ LA IMPLEMENTACIÓN QUE FALTABA! ---
+  @override
+  Future<Either<Failure, EquipmentEntity>> updateEquipmentOperations({
+    required int equipmentId,
+    double? temperature,
+    String? powerState,
+  }) async {
+    try {
+      // 1. Creamos el modelo con los datos
+      final operationModel = EquipmentOperationModel(
+        temperature: temperature,
+        powerState: powerState,
+      );
+
+      // 2. Llamamos al DataSource
+      final updatedEquipment = await remoteDataSource.updateEquipmentOperations(
+        equipmentId: equipmentId,
+        operations: operationModel,
+      );
+
+      // 3. Retornamos la entidad actualizada
+      return Right(updatedEquipment.toEntity());
+
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
   }

@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
+import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentReadingEntity.dart';
 
 import '../entities/EquipmentHealthEntity.dart';
 
@@ -35,5 +36,18 @@ abstract class EquipmentRepository {
   Future<Either<Failure, EquipmentHealthEntity>> getEquipmentHealth({
     required int equipmentId,
     required int days,
+  });
+
+  Future<Either<Failure, List<EquipmentReadingEntity>>> getEquipmentReadings({
+    required int equipmentId,
+    required int hours,
+  });
+
+  // --- ¡CORREGIDO! MÉTODO PARA ACTUALIZAR OPERACIONES ---
+  // Debe devolver EquipmentEntity (el equipo actualizado) y recibir los parámetros opcionales.
+  Future<Either<Failure, EquipmentEntity>> updateEquipmentOperations({
+    required int equipmentId,
+    double? temperature,
+    String? powerState,
   });
 }

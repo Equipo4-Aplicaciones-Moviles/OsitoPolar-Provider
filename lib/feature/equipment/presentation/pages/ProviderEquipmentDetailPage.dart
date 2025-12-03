@@ -5,6 +5,7 @@ import 'package:osito_polar_app/core/theme/app_colors.dart';
 // Provider y Entidades
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
+// Descomentamos esto para que funcione la sección de salud
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentHealthEntity.dart';
 
 class ProviderEquipmentDetailPage extends StatefulWidget {
@@ -21,7 +22,7 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
   @override
   void initState() {
     super.initState();
-    // Cargar datos al entrar
+    // Cargar datos al entrar a la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<EquipmentDetailProvider>().fetchEquipmentDetails(widget.equipmentId);
     });
@@ -33,40 +34,53 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
     final state = provider.state;
     final equipment = provider.equipment;
 
+    // --- 🔍 DEBUG LOG: VERIFICAR DATOS REALES ---
+    if (equipment != null) {
+      print("--------------------------------------------------");
+      print("🔍 DEBUG: Datos del Equipo (ID: ${equipment.id})");
+      print("   -> Nombre: ${equipment.name}");
+      print("   -> Status (Crudo): '${equipment.status}'");
+      print("   -> Temp. Actual (Sensor): ${equipment.currentTemperature}");
+      print("   -> Temp. Objetivo (Set): ${equipment.setTemperature}");
+      print("   -> ¿Está Encendido?: ${equipment.isPoweredOn}");
+      print("--------------------------------------------------");
+    }
+    // --------------------------------------------------------
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Fondo gris suave
+      backgroundColor: const Color(0xFFF5F7FA), // Fondo gris suave para contraste
       body: SafeArea(
         child: Column(
           children: [
-            // --- 1. HEADER PERSONALIZADO ---
+            // --- 1. HEADER (Botón Atrás y Título) ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Row(
                 children: [
                   _buildBackButton(context),
                   const SizedBox(width: 16),
-                  const Text(
-                    "Detalle del Equipo",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                      fontFamily: 'Inter',
+                  const Expanded(
+                    child: Text(
+                      "Detalle del Equipo",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black87,
+                        fontFamily: 'Inter',
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
-                  // Botón de Editar (Opcional)
+                  // Botón de Refrescar
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: Colors.black54),
-                    onPressed: () {
-                      // Navegar a editar
-                    },
+                    icon: const Icon(Icons.refresh, color: Colors.black54),
+                    onPressed: () => provider.fetchEquipmentDetails(widget.equipmentId),
                   )
                 ],
               ),
             ),
 
-            // --- 2. CONTENIDO ---
+            // --- 2. CONTENIDO PRINCIPAL ---
             Expanded(
               child: _buildBody(provider, state, equipment),
             ),
@@ -93,10 +107,12 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
   }
 
   Widget _buildBody(EquipmentDetailProvider provider, EquipmentDetailState state, EquipmentEntity? equipment) {
-    if (state == EquipmentDetailState.loading) {
+    // Loading inicial
+    if (state == EquipmentDetailState.loading && equipment == null) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primaryButton));
     }
 
+    // Error
     if (state == EquipmentDetailState.error || equipment == null) {
       return Center(
         child: Column(
@@ -105,7 +121,8 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
             const Icon(Icons.error_outline, size: 60, color: Colors.red),
             const SizedBox(height: 16),
             Text(provider.errorMessage, style: const TextStyle(color: Colors.grey)),
-            TextButton(
+            const SizedBox(height: 16),
+            ElevatedButton(
               onPressed: () => provider.fetchEquipmentDetails(widget.equipmentId),
               child: const Text("Reintentar"),
             )
@@ -114,18 +131,18 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       );
     }
 
-    // --- SI HAY DATOS, MOSTRAMOS EL DETALLE ---
+    // --- VISTA DE DETALLE ---
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. TARJETA PRINCIPAL (Info Básica)
-          _buildMainInfoCard(equipment),
+          // 1. TARJETA PRINCIPAL (Sin controles de edición)
+          _buildMainControlCard(equipment, provider),
 
           const SizedBox(height: 24),
 
-          // 2. SECCIÓN DE SALUD (Analytics)
+          // 2. SALUD DEL EQUIPO (Analítica)
           const Text(
             "Salud del Equipo",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
@@ -135,7 +152,7 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
 
           const SizedBox(height: 24),
 
-          // 3. DETALLES TÉCNICOS (Grid)
+          // 3. ESPECIFICACIONES TÉCNICAS
           const Text(
             "Especificaciones",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
@@ -147,42 +164,30 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
     );
   }
 
-  Widget _buildMainInfoCard(EquipmentEntity eq) {
-    // --- LÓGICA DE ESTADO CORREGIDA ---
-    // Usamos eq.status (String) en lugar de isPoweredOn
-    final String status = eq.status?.toLowerCase() ?? "inactive";
+  Widget _buildMainControlCard(EquipmentEntity eq, EquipmentDetailProvider provider) {
+    // Lógica de estado basada en String (active, inactive, etc.)
+    final String status = eq.status.toLowerCase();
 
-    Color chipColor;
-    Color textColor;
-    IconData icon;
-    String label;
+    Color chipColor = Colors.grey.shade100;
+    Color textColor = Colors.grey;
+    IconData statusIcon = Icons.help_outline;
+    String label = "DESCONOCIDO";
 
-    switch (status) {
-      case 'active':
-        chipColor = const Color(0xFFE8F5E9); // Verde claro
-        textColor = Colors.green[700]!;
-        icon = Icons.check_circle;
-        label = "ACTIVO";
-        break;
-      case 'maintenance':
-        chipColor = const Color(0xFFFFF3E0); // Naranja claro
-        textColor = Colors.orange[800]!;
-        icon = Icons.build;
-        label = "MANTENIMIENTO";
-        break;
-      case 'outofservice':
-        chipColor = const Color(0xFFFFEBEE); // Rojo claro
-        textColor = Colors.red[700]!;
-        icon = Icons.error;
-        label = "FUERA DE SERVICIO";
-        break;
-      case 'inactive':
-      default:
-        chipColor = const Color(0xFFF5F5F5); // Gris claro
-        textColor = Colors.grey[700]!;
-        icon = Icons.power_off;
-        label = "INACTIVO";
-        break;
+    if (status == 'active') {
+      chipColor = const Color(0xFFE8F5E9);
+      textColor = Colors.green;
+      statusIcon = Icons.check_circle;
+      label = "ACTIVO";
+    } else if (status == 'maintenance') {
+      chipColor = const Color(0xFFFFF3E0);
+      textColor = Colors.orange;
+      statusIcon = Icons.build;
+      label = "MANTENIMIENTO";
+    } else if (status == 'inactive' || status == 'outofservice') {
+      chipColor = const Color(0xFFFFEBEE);
+      textColor = Colors.red;
+      statusIcon = Icons.error;
+      label = "INACTIVO";
     }
 
     return Container(
@@ -192,60 +197,75 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Icono Grande
-          Container(
-            height: 80, width: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD), // Azul muy claro
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.kitchen, size: 40, color: AppColors.primaryButton),
-          ),
-          const SizedBox(width: 20),
-
-          // Textos
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  eq.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, height: 1.2),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "${eq.model ?? 'Sin modelo'} • ${eq.manufacturer ?? 'Generico'}",
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 10),
-
-                // Chip de Estado (Con lógica de Status)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: chipColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 14, color: textColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: textColor
-                        ),
+          // INFO SUPERIOR
+          Row(
+            children: [
+              Container(
+                height: 70, width: 70,
+                decoration: BoxDecoration(color: const Color(0xFFE3F2FD), borderRadius: BorderRadius.circular(18)),
+                child: const Icon(Icons.kitchen, size: 36, color: AppColors.primaryButton),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(eq.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text("${eq.model} • ${eq.manufacturer}", style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: chipColor, borderRadius: BorderRadius.circular(6)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 12, color: textColor),
+                          const SizedBox(width: 4),
+                          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor)),
+                        ],
                       ),
-                    ],
-                  ),
-                )
-              ],
-            ),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20.0),
+            child: Divider(),
+          ),
+
+          // --- INFO DE TERMOSTATO (MODO LECTURA) ---
+          // Como la API devuelve 403, quitamos los botones + / -
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Termostato", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
+                  SizedBox(height: 4),
+                  Text("Configuración Actual", style: TextStyle(fontSize: 12, color: Colors.black45)),
+                ],
+              ),
+
+              // VISUALIZADOR DE TEMPERATURA
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7FA),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                child: Text(
+                    "${eq.setTemperature?.toStringAsFixed(1) ?? '--'}°C",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black87)
+                ),
+              )
+            ],
           )
         ],
       ),
@@ -254,19 +274,14 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
 
   Widget _buildHealthSection(EquipmentDetailProvider provider) {
     if (provider.isHealthLoading) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.all(20.0),
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ));
+      return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
     }
-
     final health = provider.healthMetrics;
-
     if (health == null) {
-      return _buildErrorCard("No hay datos de salud disponibles.");
+      return _buildErrorCard("No hay datos de salud disponibles por el momento.");
     }
 
-    // Determinar colores según el score
+    // Colores dinámicos
     Color scoreColor = Colors.green;
     if (health.overallScore < 80) scoreColor = Colors.orange;
     if (health.overallScore < 50) scoreColor = Colors.red;
@@ -276,60 +291,35 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: scoreColor.withOpacity(0.2), width: 1),
-        boxShadow: [BoxShadow(color: scoreColor.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: scoreColor.withOpacity(0.3)),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Stack(
+            alignment: Alignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Puntaje de Salud", style: TextStyle(color: Colors.grey, fontSize: 14)),
-                  const SizedBox(height: 4),
-                  Text(
-                      health.status.toUpperCase(),
-                      style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold, fontSize: 16)
-                  ),
-                ],
-              ),
-              // Círculo de puntaje
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    height: 60, width: 60,
-                    child: CircularProgressIndicator(
-                      value: health.overallScore / 100,
-                      color: scoreColor,
-                      backgroundColor: Colors.grey.shade100,
-                      strokeWidth: 6,
-                    ),
-                  ),
-                  Text(
-                    "${health.overallScore.toInt()}",
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: scoreColor),
-                  )
-                ],
-              )
-            ],
-          ),
-          const Divider(height: 30),
-          // Recomendación
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.lightbulb_outline, color: Colors.amber, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  health.recommendation,
-                  style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+              SizedBox(
+                width: 60, height: 60,
+                child: CircularProgressIndicator(
+                  value: health.overallScore / 100,
+                  color: scoreColor,
+                  backgroundColor: Colors.grey.shade100,
+                  strokeWidth: 6,
                 ),
               ),
+              Text("${health.overallScore.toInt()}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: scoreColor)),
             ],
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Estado: ${health.status}", style: TextStyle(fontWeight: FontWeight.bold, color: scoreColor, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(health.recommendation, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              ],
+            ),
           )
         ],
       ),
@@ -341,13 +331,13 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.6, // Más ancho que alto
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       children: [
-        _buildSpecItem(Icons.thermostat, "Temperatura", "${eq.currentTemperature}°C"),
-        _buildSpecItem(Icons.qr_code, "Serie", eq.serialNumber ?? "N/A"),
-        _buildSpecItem(Icons.location_on_outlined, "Ubicación", eq.locationName ?? "N/A"),
+        _buildSpecItem(Icons.thermostat, "Temperatura Actual", "${eq.currentTemperature}°C"),
+        _buildSpecItem(Icons.qr_code, "Serie", eq.serialNumber),
+        _buildSpecItem(Icons.location_on, "Ubicación", eq.locationName),
         _buildSpecItem(Icons.bolt, "Energía", "${eq.energyConsumptionCurrent} ${eq.energyConsumptionCurrent}"),
       ],
     );
@@ -365,16 +355,11 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 24, color: Colors.grey.shade400),
+          Icon(icon, size: 20, color: Colors.grey.shade400),
           const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -382,14 +367,13 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
 
   Widget _buildErrorCard(String msg) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.shade100),
-      ),
-      child: Text(msg, style: TextStyle(color: Colors.red.shade700), textAlign: TextAlign.center),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(12)),
+      child: Row(children: [
+        const Icon(Icons.info_outline, color: Colors.orange),
+        const SizedBox(width: 10),
+        Expanded(child: Text(msg, style: TextStyle(color: Colors.orange.shade800, fontSize: 12)))
+      ]),
     );
   }
 }

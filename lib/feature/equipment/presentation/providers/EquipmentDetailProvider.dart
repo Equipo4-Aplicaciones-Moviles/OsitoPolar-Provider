@@ -7,107 +7,107 @@ import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentHealt
 
 // Casos de Uso
 import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentByIdUseCase.dart';
-import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentHealthUseCase.dart'; // <--- NUEVO IMPORT
+import 'package:osito_polar_app/feature/equipment/domain/usecases/GetEquipmentHealthUseCase.dart';
+// 1. IMPORTAR EL NUEVO CASO DE USO
+import 'package:osito_polar_app/feature/equipment/domain/usecases/UpdateEquipmentOperationUseCase.dart';
 
-/// Define los posibles estados de la UI para la pantalla de "Detalle de Equipo".
-enum EquipmentDetailState {
-  initial,
-  loading,
-  success,
-  error
-}
+enum EquipmentDetailState { initial, loading, success, error }
 
-/// El "ViewModel" para la pantalla de ProviderEquipmentDetailPage.
 class EquipmentDetailProvider extends ChangeNotifier {
   final GetEquipmentByIdUseCase getEquipmentByIdUseCase;
-  // --- NUEVA DEPENDENCIA ---
   final GetEquipmentHealthUseCase getEquipmentHealthUseCase;
+  // 2. AGREGAR LA DEPENDENCIA
+  final UpdateEquipmentOperationUseCase updateEquipmentOperationUseCase;
 
   EquipmentDetailProvider({
     required this.getEquipmentByIdUseCase,
     required this.getEquipmentHealthUseCase,
+    required this.updateEquipmentOperationUseCase, // Inyección
   });
 
-  // --- Estados de la UI ---
   EquipmentDetailState _state = EquipmentDetailState.initial;
   EquipmentDetailState get state => _state;
-
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  // Datos del Equipo
   EquipmentEntity? _equipment;
   EquipmentEntity? get equipment => _equipment;
 
-  // --- NUEVOS DATOS: ANALÍTICAS ---
   EquipmentHealthEntity? _healthMetrics;
   EquipmentHealthEntity? get healthMetrics => _healthMetrics;
 
-  // Estado separado para la carga de salud (para no bloquear toda la pantalla si falla)
   bool _isHealthLoading = false;
   bool get isHealthLoading => _isHealthLoading;
 
-  /// Método que la UI llamará en `initState()` para cargar los datos del equipo.
   Future<void> fetchEquipmentDetails(int equipmentId) async {
     _state = EquipmentDetailState.loading;
-    // Limpiamos datos anteriores para no mostrar basura de otro equipo
     _equipment = null;
     _healthMetrics = null;
     notifyListeners();
 
-    // 1. Llamada principal: Datos del equipo
-    final failureOrEquipment = await getEquipmentByIdUseCase(equipmentId);
+    final result = await getEquipmentByIdUseCase(equipmentId);
 
-    failureOrEquipment.fold(
+    result.fold(
           (failure) {
-        // --- Caso de Error ---
         _errorMessage = _mapFailureToMessage(failure);
         _state = EquipmentDetailState.error;
         notifyListeners();
       },
-          (equipmentData) {
-        // --- Caso de Éxito ---
-        _equipment = equipmentData;
+          (data) {
+        _equipment = data;
         _state = EquipmentDetailState.success;
         notifyListeners();
-
-        // 2. ¡Automáticamente cargamos la salud en segundo plano!
         fetchHealthMetrics(equipmentId);
       },
     );
   }
 
-  /// Nuevo método para cargar solo las analíticas
   Future<void> fetchHealthMetrics(int equipmentId) async {
     _isHealthLoading = true;
     notifyListeners();
-
-    // Por defecto analizamos los últimos 7 días
-    final params = GetHealthParams(equipmentId: equipmentId, days: 7);
-    final failureOrHealth = await getEquipmentHealthUseCase(params);
-
-    failureOrHealth.fold(
-          (failure) {
-        // Si fallan las analíticas, no cambiamos el estado global a error,
-        // solo dejamos _healthMetrics en null y la UI mostrará "No disponible".
-        print("Error cargando salud: ${_mapFailureToMessage(failure)}");
+    final result = await getEquipmentHealthUseCase(GetHealthParams(equipmentId: equipmentId, days: 7));
+    result.fold(
+          (f) => _isHealthLoading = false,
+          (data) {
+        _healthMetrics = data;
         _isHealthLoading = false;
         notifyListeners();
       },
-          (healthData) {
-        _healthMetrics = healthData;
-        _isHealthLoading = false;
+    );
+    notifyListeners();
+  }
+
+  // --- 3. MÉTODO ACTUALIZADO: AHORA USA LA API REAL ---
+  Future<void> updateSetTemperature(int equipmentId, double newTemp) async {
+    if (_equipment == null) return;
+
+    // A. Actualización Optimista (La UI cambia inmediatamente)
+    final previousTemp = _equipment!.setTemperature;
+    _equipment = _equipment!.copyWith(setTemperature: newTemp);
+    notifyListeners();
+
+    // B. Llamada a la API Real
+    final params = UpdateOperationParams(equipmentId: equipmentId, temperature: newTemp);
+    final result = await updateEquipmentOperationUseCase(params);
+
+    result.fold(
+          (failure) {
+        // Si falla, revertimos el cambio visual y mostramos error
+        _equipment = _equipment!.copyWith(setTemperature: previousTemp);
         notifyListeners();
+        print("Error actualizando temperatura: ${_mapFailureToMessage(failure)}");
+      },
+          (updatedEquipment) {
+        // Éxito: Confirmamos con los datos reales del servidor
+        _equipment = updatedEquipment;
+        notifyListeners();
+        print("Temperatura actualizada correctamente en el backend.");
       },
     );
   }
 
   String _mapFailureToMessage(Failure failure) {
-    if (failure is ServerFailure) {
-      return failure.message ?? 'Error del servidor. No se pudo cargar el equipo.';
-    } else if (failure is NotFoundFailure) {
-      return failure.message ?? 'Elemento no encontrado.';
-    }
-    return 'Un error inesperado ocurrió.';
+    if (failure is ServerFailure) return failure.message ?? 'Error del servidor';
+    return 'Error desconocido';
   }
 }

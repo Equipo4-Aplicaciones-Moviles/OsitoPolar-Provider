@@ -1,7 +1,10 @@
 import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
+import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentReadingEntity.dart';
 
 import '../models/EquipmentHealthModel.dart';
+import '../models/EquipmentOperationModel.dart';
+import '../models/EquipmentReadingModel.dart';
 /// Interfaz (Contrato) para la fuente de datos remota de Equipos.
 abstract class EquipmentRemoteDataSource {
   /// Llama al endpoint GET /api/v1/equipments
@@ -36,6 +39,18 @@ abstract class EquipmentRemoteDataSource {
   Future<EquipmentHealthModel> getEquipmentHealth({
     required int equipmentId,
     required int days,
+  });
+
+
+  Future<List<EquipmentReadingModel>> getEquipmentReadings({
+    required int equipmentId,
+    required int hours,
+  });
+
+  /// Controla el equipo (Temperatura, Encendido/Apagado)
+  Future<EquipmentModel> updateEquipmentOperations({
+    required int equipmentId,
+    required EquipmentOperationModel operations,
   });
 
 // TODO: Añadir métodos para getEquipmentById, createEquipment, etc.
