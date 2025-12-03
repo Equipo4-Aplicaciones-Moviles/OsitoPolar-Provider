@@ -37,13 +37,12 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
     final profile = profileProvider.profile;
     final isLoading = profileProvider.isLoading;
 
-    // Datos por defecto (mientras carga o si es null)
+    // Datos por defecto
     final String companyName = profile?.companyName ?? "Cargando empresa...";
     final String taxId = profile?.taxId ?? "---";
     final String planName = profile?.planName ?? "---";
     final double balance = profile?.balance ?? 0.00;
 
-    // Obtenemos el email del LoginProvider ya que ese sí lo tenemos seguro
     final email = context.read<ProviderLoginProvider>().user?.username ?? "usuario";
 
     return Scaffold(
@@ -56,12 +55,12 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false, // Sin flecha de atrás en el dashboard
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
             onPressed: () {
-              // Navegar a Configuración si existe
+              // Navegar a Configuración
             },
           )
         ],
@@ -72,7 +71,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // --- CABECERA DE PERFIL ---
+            // --- CABECERA ---
             const Center(
               child: CircleAvatar(
                 radius: 40,
@@ -87,7 +86,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
               textAlign: TextAlign.center,
             ),
             Text(
-              email, // Mostramos username o email
+              email,
               style: const TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 12),
@@ -123,10 +122,8 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      // Lógica futura: /api/v1/provider-withdrawals/request
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Función de retiro próximamente"))
-                      );
+                      // --- ¡AQUÍ CONECTAMOS LA NAVEGACIÓN! ---
+                      Navigator.pushNamed(context, '/provider_withdrawal');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
@@ -142,7 +139,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
 
             const SizedBox(height: 20),
 
-            // --- SECCIÓN 2: DATOS DE EMPRESA ---
+            // --- SECCIÓN 2: DATOS ---
             _buildInfoCard(
               title: "Información de la Empresa",
               icon: Icons.store,
@@ -157,7 +154,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
 
             const SizedBox(height: 20),
 
-            // --- SECCIÓN 3: ESTADÍSTICAS DEL PLAN ---
+            // --- SECCIÓN 3: PLAN ---
             _buildInfoCard(
               title: "Uso del Plan",
               icon: Icons.pie_chart,
@@ -172,7 +169,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
                   _buildUsageBar(
                       label: "Solicitudes Activas",
                       current: profile?.activeServiceRequests ?? 0,
-                      max: 50, // Ejemplo, o traerlo del plan
+                      max: 50,
                       color: Colors.orange
                   ),
                 ],
@@ -181,13 +178,12 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
 
             const SizedBox(height: 20),
 
-            // --- SECCIÓN 4: SEGURIDAD (2FA) ---
+            // --- SECCIÓN 4: SEGURIDAD ---
             _buildInfoCard(
               title: "Seguridad",
               icon: Icons.security,
               child: InkWell(
                 onTap: () {
-                  // Navegar a la pantalla de configuración 2FA
                   Navigator.pushNamed(context, '/2fa_setup');
                 },
                 child: Padding(
@@ -211,12 +207,11 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
 
             const SizedBox(height: 30),
 
-            // --- BOTÓN CERRAR SESIÓN ---
+            // --- BOTÓN LOGOUT ---
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  // Logout
                   context.read<ProviderLoginProvider>().logout();
                   Navigator.pushNamedAndRemoveUntil(context, '/get_started', (route) => false);
                 },
@@ -237,7 +232,6 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
   }
 
   // --- WIDGETS AUXILIARES ---
-
   Widget _buildInfoCard({required String title, required IconData icon, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(20),

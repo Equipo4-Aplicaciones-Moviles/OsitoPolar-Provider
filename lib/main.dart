@@ -239,15 +239,6 @@ class _MyAppState extends State<MyApp> {
           case '/provider_clients_technicians':
             return MaterialPageRoute(builder: (context) => const ProviderClientsTechniciansPage());
 
-          case '/provider_equipment_detail':
-            final args = settings.arguments;
-            if (args is int) {
-              return MaterialPageRoute(
-                builder: (context) => ProviderEquipmentDetailPage(equipmentId: args),
-              );
-            }
-            return MaterialPageRoute(builder: (context) => const Scaffold(body: Center(child: Text("ID Inválido"))));
-
           case '/terms':
             return MaterialPageRoute(builder: (context) => const TermsPage());
 

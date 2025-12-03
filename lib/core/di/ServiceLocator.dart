@@ -15,7 +15,6 @@ import 'package:osito_polar_app/feature/authentication/domain/usecases/VerifyTwo
 // ----------------------------
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
-
 // --- EQUIPMENT IMPORTS ---
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSource.dart';
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSourceImpl.dart';
@@ -58,6 +57,9 @@ import 'package:osito_polar_app/feature/technician/presentation/providers/Techni
 
 import '../../feature/equipment/domain/usecases/GetEquipmentHealthUseCase.dart';
 import '../../feature/equipment/domain/usecases/UpdateEquipmentOperationUseCase.dart';
+import '../../feature/provider-withdrawals/data/models/WithdrawalModel.dart';
+import '../../feature/provider-withdrawals/data/repositories/WithdrawalRepository.dart';
+import '../../feature/provider-withdrawals/presentation/providers/WithdrawalProviders.dart';
 
 
 final sl = GetIt.instance;
@@ -161,5 +163,20 @@ Future<void> setupLocator() async {
   ));
   sl.registerFactory(() => TechnicianDetailProvider(
     getTechnicianByIdUseCase: sl(),
+  ));
+
+
+  sl.registerLazySingleton<WithdrawalRemoteDataSource>(
+  () => WithdrawalRemoteDataSourceImpl(client: sl(), prefs: sl()));
+  sl.registerLazySingleton<WithdrawalRepository>(
+  () => WithdrawalRepositoryImpl(remoteDataSource: sl()));
+
+  sl.registerLazySingleton(() => GetProviderBalanceUseCase(sl()));
+  sl.registerLazySingleton(() => RequestWithdrawalUseCase(sl()));
+
+// 2. Provider
+  sl.registerFactory(() => WithdrawalProvider(
+  getProviderBalanceUseCase: sl(),
+  requestWithdrawalUseCase: sl(),
   ));
 }
