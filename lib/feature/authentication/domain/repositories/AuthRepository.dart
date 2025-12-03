@@ -3,6 +3,7 @@ import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 
+import '../../data/models/TwoFactorSecretModel.dart';
 import '../entities/RegistrationCredentialsEntity.dart';
 
 abstract class AuthRepository {
@@ -31,4 +32,6 @@ abstract class AuthRepository {
     required String username,
     required String code,
   });
+
+  Future<Either<Failure, TwoFactorSecretModel>> initiateTwoFactor(String username);
 }

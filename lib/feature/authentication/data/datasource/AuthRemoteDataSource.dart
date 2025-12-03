@@ -3,6 +3,8 @@ import 'package:osito_polar_app/feature/authentication/data/models/Authenticated
 import 'package:osito_polar_app/feature/authentication/data/models/RegistrationCheckoutModel.dart';
 import 'package:osito_polar_app/feature/authentication/data/models/RegistrationCredentialsModel.dart';
 
+import '../models/TwoFactorSecretModel.dart';
+
 abstract class AuthRemoteDataSource {
   Future<AuthenticatedUserModel> signIn(SignInRequestModel request);
 
@@ -25,4 +27,6 @@ abstract class AuthRemoteDataSource {
     required String username,
     required String code,
   });
+
+  Future<TwoFactorSecretModel> initiateTwoFactor(String username);
 }

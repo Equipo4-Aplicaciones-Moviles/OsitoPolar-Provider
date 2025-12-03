@@ -222,7 +222,7 @@ class _MyAppState extends State<MyApp> {
 
           case '/2fa_setup':
           // Usamos la misma página para setup/verificación por ahora o puedes separarlas
-            return MaterialPageRoute(builder: (context) => const TwoFactorVerificationPage());
+            return MaterialPageRoute(builder: (context) => const TwoFactorSetupPage());
 
 
           case AppRoute.providerRegister:

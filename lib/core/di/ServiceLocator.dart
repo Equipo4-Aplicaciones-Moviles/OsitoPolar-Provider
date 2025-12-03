@@ -55,6 +55,7 @@ import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnician
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
 
+import '../../feature/authentication/domain/usecases/InitiateTwoFactorUseCase.dart';
 import '../../feature/equipment/domain/usecases/GetEquipmentHealthUseCase.dart';
 import '../../feature/equipment/domain/usecases/UpdateEquipmentOperationUseCase.dart';
 import '../../feature/provider-withdrawals/data/models/WithdrawalModel.dart';
@@ -74,7 +75,7 @@ Future<void> setupLocator() async {
 
 
   // --- Authentication ---
-  sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(client: sl()));
+  sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(client: sl(), prefs: sl()));
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(remoteDataSource: sl()));
 
   // UseCases Auth
@@ -88,9 +89,10 @@ Future<void> setupLocator() async {
 
   // Providers Auth
   sl.registerFactory(() => ProviderLoginProvider(
-      signInUseCase: sl(),
-      verifyTwoFactorUseCase: sl(), // Ahora sí encontrará la dependencia
-      prefs: sl()
+    signInUseCase: sl(),
+    verifyTwoFactorUseCase: sl(),
+    initiateTwoFactorUseCase: sl(), // <-- Nuevo
+    prefs: sl(),
   ));
   sl.registerFactory(() => RegisterProvider(
     createRegistrationCheckoutUseCase: sl(),
@@ -128,6 +130,8 @@ Future<void> setupLocator() async {
     publishEquipmentUseCase: sl(),
     unpublishEquipmentUseCase: sl(),
   ));
+
+  sl.registerLazySingleton(() => InitiateTwoFactorUseCase(sl()));
 
   // --- ServiceRequest Stack ---
   sl.registerLazySingleton<ServiceRequestRemoteDataSource>(() => ServiceRequestRemoteDataSourceImpl(client: sl(), prefs: sl()));

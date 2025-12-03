@@ -8,13 +8,20 @@ import 'package:osito_polar_app/feature/authentication/data/models/RegistrationC
 import 'package:osito_polar_app/feature/authentication/data/datasource/AuthRemoteDataSource.dart';
 // --- ¡AÑADE ESTE IMPORT! ---
 import 'package:osito_polar_app/feature/authentication/data/models/RegistrationCredentialsModel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../core/error/Exceptions.dart';
+import '../models/TwoFactorSecretModel.dart';
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final http.Client client;
   final String baseUrl;
+  final SharedPreferences prefs;
 
-  AuthRemoteDataSourceImpl({required this.client})
-      : baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:8080';
+  AuthRemoteDataSourceImpl({
+    required this.client,
+    required this.prefs, // <--- SE INYECTA EN EL CONSTRUCTOR
+  }) : baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:8080';
 
   // (signIn - sin cambios)
   @override
@@ -132,6 +139,46 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
     } catch (e) {
       throw Exception('Error de conexión en 2FA.');
+    }
+  }
+
+  @override
+  Future<TwoFactorSecretModel> initiateTwoFactor(String username) async {
+    print("🔍 DEBUG: Iniciando initiateTwoFactor para usuario: $username");
+    final token = prefs.getString('auth_token');
+    if (token == null) {
+      print("❌ DEBUG: Token es NULO. El usuario no está autenticado en Prefs.");
+      throw ServerException(message: 'Token no encontrado');
+    } else {
+      print("✅ DEBUG: Token encontrado (longitud: ${token.length})");
+    }
+
+    final url = Uri.parse('$baseUrl/api/v1/authentication/initiate-2fa');
+    print("🚀 DEBUG: Llamando a API URL: $url");
+
+    try {
+      final response = await client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'username': username}),
+      );
+
+      print("📥 DEBUG: Respuesta recibida. Código: ${response.statusCode}");
+      print("📄 DEBUG: Cuerpo respuesta: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return TwoFactorSecretModel.fromJson(data);
+      } else {
+        print("⚠️ DEBUG: Error del servidor: ${response.statusCode}");
+        throw ServerException(message: 'Error al iniciar 2FA: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("🔥 DEBUG: Excepción de conexión/código: $e");
+      throw ServerException(message: e.toString());
     }
   }
 }

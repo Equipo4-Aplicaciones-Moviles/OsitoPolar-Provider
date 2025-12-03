@@ -7,7 +7,9 @@ import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthR
 // --- ¡NUEVO IMPORT! ---
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 
+import '../../../../core/error/Exceptions.dart';
 import '../../domain/entities/RegistrationCredentialsEntity.dart';
+import '../models/TwoFactorSecretModel.dart';
 
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -87,6 +89,18 @@ class AuthRepositoryImpl implements AuthRepository {
       final userModel = await remoteDataSource.verifyTwoFactor(username: username, code: code);
       return Right(userModel.toEntity());
     } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TwoFactorSecretModel>> initiateTwoFactor(String username) async {
+    try {
+      final result = await remoteDataSource.initiateTwoFactor(username);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
   }

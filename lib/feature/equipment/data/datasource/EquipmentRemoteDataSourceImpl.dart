@@ -19,7 +19,7 @@ class EquipmentRemoteDataSourceImpl implements EquipmentRemoteDataSource {
 
   EquipmentRemoteDataSourceImpl({required this.client, required this.prefs})
   // Carga la URL base desde el archivo .env
-      : baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:8080';
+      : baseUrl = dotenv.env['BASE_URL'] ?? 'https://ositopolar-api.grayground-d49718c1.eastus.azurecontainerapps.io';
 
   @override
   Future<List<EquipmentModel>> getEquipments() async {
