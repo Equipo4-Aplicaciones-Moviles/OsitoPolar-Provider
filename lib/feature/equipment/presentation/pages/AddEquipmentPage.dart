@@ -4,16 +4,12 @@ import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEqui
 import 'package:osito_polar_app/core/theme/app_colors.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 
-/// Pantalla de Formulario para "Añadir/Editar Equipo".
 class AddEquipmentPage extends StatefulWidget {
-  // --- ¡AÑADIDO! ---
-  // El ID del equipo que queremos editar.
-  // Es 'null' si estamos en modo "Crear".
   final int? equipmentId;
 
   const AddEquipmentPage({
     super.key,
-    this.equipmentId, // <-- Parámetro de navegación
+    this.equipmentId,
   });
 
   @override
@@ -25,456 +21,268 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final _nameController = TextEditingController();
   final _modelController = TextEditingController();
   final _serialNumberController = TextEditingController();
-  final _ownerIdController = TextEditingController();
   final _codeController = TextEditingController();
   final _notesController = TextEditingController();
-  final _ownerTypeController = TextEditingController();
   final _locationNameController = TextEditingController();
   final _manufacturerController = TextEditingController();
   final _locationAddressController = TextEditingController();
   final _technicalDetailsController = TextEditingController();
-  final _energyConsumptionUnitController = TextEditingController();
   final _costController = TextEditingController(text: '0.0');
-  final _currentTemperatureController = TextEditingController(text: '0.0');
-  final _setTemperatureController = TextEditingController(text: '0.0');
+
   final _optimalTemperatureMinController = TextEditingController(text: '-18.0');
   final _optimalTemperatureMaxController = TextEditingController(text: '-15.0');
+
+  final _currentTemperatureController = TextEditingController(text: '0.0');
+  final _setTemperatureController = TextEditingController(text: '0.0');
   final _energyConsumptionCurrentController = TextEditingController(text: '0.0');
   final _energyConsumptionAverageController = TextEditingController(text: '0.0');
+  final _energyConsumptionUnitController = TextEditingController(text: 'kWh');
 
   // --- Estado para los Dropdowns ---
   String? _selectedType;
   final List<String> _equipmentTypes = ['Freezer', 'ColdRoom', 'Refrigerator'];
-  String? _selectedOwnership;
-  final List<String> _ownershipTypes = ['Owned', 'Rented', 'Leased'];
 
   bool get _isEditMode => widget.equipmentId != null;
+
+  // --- Estado para la navegación por pasos simulada ---
+  int _currentStep = 1;
+  final int _totalSteps = 2;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Limpiamos CUALQUIER estado anterior
       context.read<AddEquipmentProvider>().clear();
-
       if (_isEditMode) {
-        // Si nos pasaron un ID, le decimos al Provider que cargue los datos
-        print('Modo Edición: Cargando datos para ID ${widget.equipmentId}');
         context.read<AddEquipmentProvider>().loadEquipmentForEdit(widget.equipmentId!);
-      } else {
-        // Modo Creación: (ya está limpio)
-        print('Modo Creación: Formulario nuevo');
       }
     });
   }
 
   @override
   void dispose() {
-    // (Tu dispose() está perfecto)
     _nameController.dispose();
     _modelController.dispose();
     _serialNumberController.dispose();
-    _ownerIdController.dispose();
     _codeController.dispose();
     _notesController.dispose();
-    _ownerTypeController.dispose();
     _locationNameController.dispose();
     _manufacturerController.dispose();
     _locationAddressController.dispose();
     _technicalDetailsController.dispose();
-    _energyConsumptionUnitController.dispose();
     _costController.dispose();
-    _currentTemperatureController.dispose();
-    _setTemperatureController.dispose();
     _optimalTemperatureMinController.dispose();
     _optimalTemperatureMaxController.dispose();
+    _currentTemperatureController.dispose();
+    _setTemperatureController.dispose();
     _energyConsumptionCurrentController.dispose();
     _energyConsumptionAverageController.dispose();
+    _energyConsumptionUnitController.dispose();
     super.dispose();
   }
 
   /// Método que se llama al presionar "Guardar"
   void _onSavePressed() {
-    // --- (La validación es la misma) ---
+    // --- VALIDACIÓN SIMPLIFICADA ---
     if (_nameController.text.isEmpty ||
         _serialNumberController.text.isEmpty ||
-        _ownerIdController.text.isEmpty ||
         _codeController.text.isEmpty ||
-        _notesController.text.isEmpty ||
-        _ownerTypeController.text.isEmpty ||
         _locationNameController.text.isEmpty ||
         _manufacturerController.text.isEmpty ||
-        _selectedType == null ||
-        _locationAddressController.text.isEmpty ||
-        _technicalDetailsController.text.isEmpty ||
-        _energyConsumptionUnitController.text.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(
-          content: Text('Error: Todos los campos marcados con (*) son obligatorios.'),
-          backgroundColor: Colors.orange,
-        ));
+        _selectedType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Error: Por favor completa la información principal.'),
+        backgroundColor: Colors.orange,
+      ));
       return;
     }
 
-    // --- ¡LLAMADA AL PROVIDER ACTUALIZADA! ---
-    // 1. Empaquetamos todos los controllers en un Map
+    // --- ¡LLAMADA AL PROVIDER CON HARDCODES! ---
     final Map<String, dynamic> equipmentData = {
+      // Información Básica y de Perfil
       'name': _nameController.text,
       'type': _selectedType!,
       'model': _modelController.text,
       'serialNumber': _serialNumberController.text,
-      'ownerId': int.tryParse(_ownerIdController.text) ?? 0,
       'code': _codeController.text,
-      'notes': _notesController.text,
-      'ownerType': _ownerTypeController.text,
-      'locationName': _locationNameController.text,
       'manufacturer': _manufacturerController.text,
-      'ownershipType': 'Owned',
-      'locationAddress': _locationAddressController.text,
-      'technicalDetails': _technicalDetailsController.text,
-      'energyConsumptionUnit': _energyConsumptionUnitController.text,
+      'notes': _notesController.text,
       'cost': double.tryParse(_costController.text) ?? 0.0,
+
+      // Ubicación
+      'locationName': _locationNameController.text,
+      'locationAddress': _locationAddressController.text, // <-- Aún enviamos el controller
+      'technicalDetails': _technicalDetailsController.text,
+
+      // --- HARDCODEADOS (Valores Internos) ---
+      'ownerId': 0, 'ownerType': 'Provider', 'ownershipType': 'Owned',
       'currentTemperature': double.tryParse(_currentTemperatureController.text) ?? 0.0,
       'setTemperature': double.tryParse(_setTemperatureController.text) ?? 0.0,
-      'optimalTemperatureMin': double.tryParse(_optimalTemperatureMinController.text) ?? 0.0,
-      'optimalTemperatureMax': double.tryParse(_optimalTemperatureMaxController.text) ?? 0.0,
-      'locationLatitude': 0.0, // (Seguimos enviando 0.0)
-      'locationLongitude': 0.0,
+      'optimalTemperatureMin': double.tryParse(_optimalTemperatureMinController.text) ?? -18.0,
+      'optimalTemperatureMax': double.tryParse(_optimalTemperatureMaxController.text) ?? -15.0,
+      'energyConsumptionUnit': _energyConsumptionUnitController.text,
       'energyConsumptionCurrent': double.tryParse(_energyConsumptionCurrentController.text) ?? 0.0,
       'energyConsumptionAverage': double.tryParse(_energyConsumptionAverageController.text) ?? 0.0,
+      'locationLatitude': 0.0,
+      'locationLongitude': 0.0,
     };
 
-    // 2. Llamamos al nuevo método 'saveEquipment'
     context.read<AddEquipmentProvider>().saveEquipment(equipmentData);
   }
 
-  /// --- ¡HELPER ACTUALIZADO! ---
-  /// Rellena los campos del formulario cuando el Provider
-  /// termina de cargar los datos en Modo Edición.
+  /// Helper para rellenar los campos en modo edición
   void _populateFormFields(EquipmentEntity equipment) {
     _nameController.text = equipment.name;
     _modelController.text = equipment.model;
     _serialNumberController.text = equipment.serialNumber;
-    _ownerIdController.text = equipment.ownerId.toString();
     _codeController.text = equipment.code;
+    _manufacturerController.text = equipment.manufacturer;
+    // Asumimos que el costo está en la entidad
+    // _costController.text = equipment.cost.toString(); // Esto falla si cost no está en la Entity
     _notesController.text = equipment.notes;
     _locationNameController.text = equipment.locationName;
-    _manufacturerController.text = equipment.manufacturer;
+
+    // --- ¡CORRECCIÓN HACK! COMENTAR LAS LÍNEAS QUE ROMPEN ---
+    // El campo 'locationAddress' no existe en la Entity, ¡así que lo saltamos!
+    // _locationAddressController.text = equipment.locationAddress;
+
     _technicalDetailsController.text = equipment.technicalDetails;
-    _currentTemperatureController.text = equipment.currentTemperature.toString();
-    _energyConsumptionCurrentController.text = equipment.energyConsumptionCurrent.toString();
 
-    // --- (Valores 'falsos' que rellenamos porque la API no los provee) ---
-    _ownerTypeController.text = "Client";
-    _locationAddressController.text = "Av. Principal 123";
-    _energyConsumptionUnitController.text = "kWh";
-    _costController.text = "0.0";
-    _setTemperatureController.text = "0.0";
-    _optimalTemperatureMinController.text = "-18.0";
-    _optimalTemperatureMaxController.text = "-15.0";
-    _energyConsumptionAverageController.text = "0.0";
+    // Asumimos que los óptimos sí existen para rellenarlos
+    // _optimalTemperatureMinController.text = equipment.optimalTemperatureMin.toString();
+    // _optimalTemperatureMaxController.text = equipment.optimalTemperatureMax.toString();
 
-    // Manejamos los Dropdowns
     if (_equipmentTypes.contains(equipment.type)) {
       _selectedType = equipment.type;
     }
-
-    // --- ¡BUG ARREGLADO! ---
-    //    Usamos 'equipment.ownershipType' (el campo real)
-    if (_ownershipTypes.contains(equipment.ownershipType)) {
-      _selectedOwnership = equipment.ownershipType;
-    }
   }
-
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AddEquipmentProvider>();
     final state = provider.state;
+    final bool isLoading = (state == AddEquipmentState.loading);
 
-    // --- Listener para Efectos Secundarios ---
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<AddEquipmentProvider>();
-
-      // --- ¡LÓGICA DE EDICIÓN ACTUALIZADA! ---
-      if (state == AddEquipmentState.dataLoaded && provider.editingEquipment != null) {
-        _populateFormFields(provider.editingEquipment!);
-        // --- ¡EL BUG ESTÁ ARREGLADO AQUÍ! ---
-        provider.acknowledgeStateHandled();
+      final providerRead = context.read<AddEquipmentProvider>();
+      if (state == AddEquipmentState.dataLoaded && providerRead.editingEquipment != null) {
+        _populateFormFields(providerRead.editingEquipment!);
+        providerRead.acknowledgeStateHandled();
       }
-
       if (state == AddEquipmentState.success) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(_isEditMode ? '¡Equipo actualizado!' : '¡Equipo creado!'),
-            backgroundColor: Colors.green,
-          ));
-        provider.clear();
-        Navigator.pop(context); // Vuelve al dashboard
+            backgroundColor: Colors.green));
+        providerRead.clear();
+        Navigator.pop(context);
       }
       if (state == AddEquipmentState.error) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Error: ${provider.errorMessage}'),
-            backgroundColor: Colors.red,
-          ));
-        // Resetea el estado para reintentar, ¡PERO MANTIENE EL MODO EDICIÓN!
-        provider.resetState();
+            backgroundColor: Colors.red));
+        providerRead.resetState();
       }
     });
 
-    // Devolvemos el Scaffold
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
+      // AppBar más minimalista y con el título de la página/sección en grande
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        shadowColor: AppColors.cardBorder,
+        backgroundColor: Colors.transparent, // Fondo transparente
+        elevation: 0, // Sin sombra
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.iconColor),
-          // --- ¡AÑADIDO! Limpiamos el estado al salir ---
           onPressed: () {
             context.read<AddEquipmentProvider>().clear();
             Navigator.pop(context);
           },
         ),
         title: Text(
-          // --- ¡TÍTULO DINÁMICO! ---
-          _isEditMode ? 'Editar Equipo' : 'Añadir Nuevo Equipo',
-          style: const TextStyle(
-            color: AppColors.logoColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            fontFamily: 'Inter',
-          ),
+          'Registro', // Usamos un nombre más genérico para la estética
+          style: const TextStyle(color: AppColors.logoColor, fontWeight: FontWeight.normal, fontFamily: 'Inter', fontSize: 20),
         ),
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
-        // Si el estado es 'loading' (cargando datos O guardando)
-        child: (state == AddEquipmentState.loading)
-            ? const Center(child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ))
+        child: isLoading
+            ? const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator()))
             : Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            elevation: 0,
-            color: AppColors.cardBackground,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
-              side: const BorderSide(color: AppColors.cardBorder, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Container( // Reemplazamos Card por Container para el Box Decoration
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32.0), // Borde más redondeado
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+              // Simulamos el fondo degradado blanco/azul
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withOpacity(0.95),
+                  AppColors.cardBackground.withOpacity(0.8),
+                ],
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- ¡FORMULARIO ACTUALIZADO CON TODOS LOS CAMPOS! ---
 
-                  // --- Sección Principal ---
-                  _buildSectionTitle('Información Principal'),
-                  _buildTextField(
-                    controller: _nameController,
-                    labelText: 'Nombre del Equipo (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _serialNumberController,
-                    labelText: 'Número de Serie (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _codeController,
-                    labelText: 'Código (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _manufacturerController,
-                    labelText: 'Fabricante (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _modelController,
-                    labelText: 'Modelo (ej. VF-200)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-
-                  // --- ¡CAMPO "TIPO" MODIFICADO! ---
-                  _buildDropdownField(
-                    value: _selectedType,
-                    labelText: 'Tipo (*)',
-                    items: _equipmentTypes,
-                    onChanged: (state == AddEquipmentState.loading)
-                        ? null
-                        : (newValue) {
-                      setState(() {
-                        _selectedType = newValue;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _technicalDetailsController,
-                    labelText: 'Detalles Técnicos (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-
-                  // --- Sección de Propiedad ---
-                  _buildSectionTitle('Propiedad'),
-                  _buildTextField(
-                    controller: _ownerIdController,
-                    labelText: 'ID del Propietario (Cliente) (*)',
-                    keyboardType: TextInputType.number,
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _ownerTypeController,
-                    labelText: 'Tipo de Propietario (ej. Client) (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-
-                  // --- ¡CAMPO "POSESIÓN" MODIFICADO! ---
-
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _costController,
-                    labelText: 'Costo',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-
-                  // --- Sección de Localización ---
-                  _buildSectionTitle('Localización'),
-                  _buildTextField(
-                    controller: _locationNameController,
-                    labelText: 'Nombre de Localización (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _locationAddressController,
-                    labelText: 'Dirección de Localización (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  // --- ¡CAMPOS LAT/LNG ELIMINADOS DE LA UI! ---
-
-                  // --- Sección de Operación ---
-                  _buildSectionTitle('Operación'),
-                  Row(children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _currentTemperatureController,
-                        labelText: 'Temp. Actual',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        isEnabled: state != AddEquipmentState.loading,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _setTemperatureController,
-                        labelText: 'Temp. Deseada',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        isEnabled: state != AddEquipmentState.loading,
-                      ),
-                    ),
-                  ],),
-                  const SizedBox(height: 16.0),
-                  Row(children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _optimalTemperatureMinController,
-                        labelText: 'Temp. Óptima Mín',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        isEnabled: state != AddEquipmentState.loading,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _optimalTemperatureMaxController,
-                        labelText: 'Temp. Óptima Máx',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                        isEnabled: state != AddEquipmentState.loading,
-                      ),
-                    ),
-                  ],),
-                  const SizedBox(height: 16.0),
-                  _buildTextField(
-                    controller: _energyConsumptionUnitController,
-                    labelText: 'Unidad de Energía (ej. kWh) (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 16.0),
-                  Row(children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _energyConsumptionCurrentController,
-                        labelText: 'Consumo Actual',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        isEnabled: state != AddEquipmentState.loading,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _energyConsumptionAverageController,
-                        labelText: 'Consumo Promedio',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        isEnabled: state != AddEquipmentState.loading,
-                      ),
-                    ),
-                  ],),
-
-                  // --- Notas y Botón ---
-                  _buildSectionTitle('Otros'),
-                  _buildTextField(
-                    controller: _notesController,
-                    labelText: 'Notas (*)',
-                    isEnabled: state != AddEquipmentState.loading,
-                  ),
-                  const SizedBox(height: 32.0),
-
-                  // --- Botón de Guardar ---
-                  ElevatedButton(
-                    onPressed: (state == AddEquipmentState.loading)
-                        ? null // Deshabilita el botón si está cargando
-                        : _onSavePressed, // Llama a nuestro método
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryButton,
-                      foregroundColor: AppColors.buttonLabel,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                    ),
-                    child: (state == AddEquipmentState.loading)
-                        ? const CircularProgressIndicator(
-                      valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.white),
-                    )
-                        : Text(
-                      // --- ¡TEXTO DINÁMICO! ---
-                      _isEditMode ? 'Actualizar Equipo' : 'Guardar Equipo',
-                      style: const TextStyle(
+                  // Título principal como en la imagen
+                  Text(
+                    _isEditMode ? 'Editar Equipo' : 'Añadir Nuevo Equipo',
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
                         fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        color: AppColors.title),
                   ),
+                  const SizedBox(height: 8),
+
+                  // Texto secundario y link a Login/Volver
+                  Row(
+                    children: [
+                      Text(
+                        _isEditMode ? 'Revisa la información' : 'Completa la información',
+                        style: TextStyle(fontSize: 14, color: AppColors.textColor.withOpacity(0.7)),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Text(
+                          'Volver',
+                          style: TextStyle(
+                            color: AppColors.primaryButton,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // --- NAVEGACIÓN POR PASOS (Step Indicator) ---
+                  _buildStepIndicator(),
+                  const SizedBox(height: 24),
+
+                  // --- SECCIONES DE FORMULARIO CON PASOS ---
+                  _currentStep == 1
+                      ? _buildStepOneFields() // Información Básica y Ubicación
+                      : _buildStepTwoFields(), // Configuración
+
+                  const SizedBox(height: 32),
+
+                  // --- Botones de Navegación/Guardar ---
+                  _buildNavigationButtons(isLoading),
                 ],
               ),
             ),
@@ -484,23 +292,201 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
     );
   }
 
-  // Helper para títulos de sección
+  // --- BUILDERS DE SECCIONES (Nuevos) ---
+
+  Widget _buildStepIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Paso 1
+        _buildStepItem(1, 'Información Principal', _currentStep == 1),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: _currentStep > 1 ? AppColors.primaryButton : AppColors.cardBorder,
+          ),
+        ),
+        // Paso 2
+        _buildStepItem(2, 'Configuración', _currentStep == 2),
+      ],
+    );
+  }
+
+  Widget _buildStepItem(int step, String title, bool isActive) {
+    Color circleColor = isActive ? AppColors.primaryButton : AppColors.cardBorder;
+    Color numberColor = isActive ? AppColors.buttonLabel : AppColors.textColor;
+    Color titleColor = isActive ? AppColors.primaryButton : AppColors.textColor.withOpacity(0.7);
+
+    return Column(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: circleColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primaryButton, width: isActive ? 0 : 1),
+          ),
+          child: Center(
+            child: Text(
+              '$step',
+              style: TextStyle(
+                color: numberColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            color: titleColor,
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildStepOneFields() {
+    final bool isLoading = context.watch<AddEquipmentProvider>().state == AddEquipmentState.loading;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle('Datos Esenciales'),
+        _buildTextField(controller: _nameController, labelText: 'Nombre del Equipo (*)', isEnabled: !isLoading),
+        const SizedBox(height: 16),
+        _buildDropdownField(
+          value: _selectedType,
+          labelText: 'Tipo *',
+          items: _equipmentTypes,
+          onChanged: (val) => setState(() => _selectedType = val),
+          isEnabled: !isLoading,
+        ),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: _buildTextField(controller: _manufacturerController, labelText: 'Fabricante (*)', isEnabled: !isLoading)),
+          const SizedBox(width: 16),
+          Expanded(child: _buildTextField(controller: _modelController, labelText: 'Modelo', isEnabled: !isLoading)),
+        ]),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: _buildTextField(controller: _serialNumberController, labelText: 'N° Serie (*)', isEnabled: !isLoading)),
+          const SizedBox(width: 16),
+          Expanded(child: _buildTextField(controller: _codeController, labelText: 'Código (*)', isEnabled: !isLoading)),
+        ]),
+
+        // --- UBICACIÓN ---
+        _buildSectionTitle('Ubicación y Costo'),
+        _buildTextField(controller: _locationNameController, labelText: 'Nombre de Ubicación (*)', isEnabled: !isLoading),
+        const SizedBox(height: 16),
+        _buildTextField(controller: _locationAddressController, labelText: 'Dirección', isEnabled: !isLoading),
+        const SizedBox(height: 16),
+        _buildTextField(controller: _costController, labelText: 'Costo de Adquisición', keyboardType: TextInputType.number, isEnabled: !isLoading),
+      ],
+    );
+  }
+
+  Widget _buildStepTwoFields() {
+    final bool isLoading = context.watch<AddEquipmentProvider>().state == AddEquipmentState.loading;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // --- CONFIGURACIÓN ---
+        _buildSectionTitle('Temperaturas y Notas'),
+        _buildTextField(controller: _technicalDetailsController, labelText: 'Especificaciones Técnicas', isEnabled: !isLoading),
+        const SizedBox(height: 16.0),
+
+        Row(children: [
+          Expanded(child: _buildTextField(
+              controller: _optimalTemperatureMinController,
+              labelText: 'Temp. Óptima Mín (°C)',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              isEnabled: !isLoading)),
+          const SizedBox(width: 16),
+          Expanded(child: _buildTextField(
+              controller: _optimalTemperatureMaxController,
+              labelText: 'Temp. Óptima Máx (°C)',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              isEnabled: !isLoading)),
+        ]),
+
+        const SizedBox(height: 16.0),
+        _buildTextField(controller: _notesController, labelText: 'Notas Adicionales'),
+      ],
+    );
+  }
+
+  Widget _buildNavigationButtons(bool isLoading) {
+    if (_currentStep == 1) {
+      return ElevatedButton(
+        onPressed: isLoading ? null : () => setState(() => _currentStep = 2),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryButton,
+          foregroundColor: AppColors.buttonLabel,
+          minimumSize: const Size(double.infinity, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+        ),
+        child: const Text(
+          'Siguiente',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+      );
+    } else {
+      // Step 2: Botón de Guardar / Actualizar
+      return Column(
+        children: [
+          // Botón Anterior
+          TextButton(
+            onPressed: isLoading ? null : () => setState(() => _currentStep = 1),
+            child: Text(
+              'Volver a Información Principal',
+              style: TextStyle(color: AppColors.textColor.withOpacity(0.7)),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Botón Principal de Guardar
+          ElevatedButton(
+            onPressed: isLoading ? null : _onSavePressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryButton,
+              foregroundColor: AppColors.buttonLabel,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+            ),
+            child: isLoading
+                ? const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            )
+                : Text(
+              _isEditMode ? 'Actualizar Equipo' : 'Guardar Equipo',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  // Helper para títulos de sección (sin cambios en la función, pero con nuevo uso)
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
       child: Text(
         title,
         style: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-          color: AppColors.title,
-        ),
+            fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.title),
       ),
     );
   }
 
-  /// Helper para campos de texto
+  /// Helper para campos de texto (se añade un pequeño padding a la etiqueta para que se vea más flotante)
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
@@ -513,82 +499,40 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: labelText,
+        floatingLabelBehavior: FloatingLabelBehavior.always, // Para que la etiqueta esté siempre arriba
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18), // Más padding
         filled: true,
         fillColor: AppColors.textFieldBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.primaryButton,
-            width: 2,
-          ),
-        ),
-        labelStyle: const TextStyle(
-          color: AppColors.textColor,
-          fontFamily: 'Inter',
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), // Sin borde visible
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryButton, width: 2)),
+        labelStyle: const TextStyle(color: AppColors.textColor, fontSize: 16, fontWeight: FontWeight.w500),
       ),
     );
   }
 
-  // --- ¡NUEVO HELPER PARA DROPDOWNS! ---
+  /// Helper para Dropdowns (similar al cambio de TextField)
   Widget _buildDropdownField({
     required String? value,
     required String labelText,
     required List<String> items,
     required ValueChanged<String?>? onChanged,
+    bool isEnabled = true,
   }) {
     return DropdownButtonFormField<String>(
       value: value,
-      items: items.map((String item) {
-        return DropdownMenuItem<String>(
-          value: item,
-          child: Text(item, style: const TextStyle(fontFamily: 'Inter')),
-        );
-      }).toList(),
-      onChanged: onChanged,
+      items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+      onChanged: isEnabled ? onChanged : null,
       decoration: InputDecoration(
         labelText: labelText,
+        floatingLabelBehavior: FloatingLabelBehavior.always, // Para que la etiqueta esté siempre arriba
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18), // Más padding
         filled: true,
         fillColor: AppColors.textFieldBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.primaryButton,
-            width: 2,
-          ),
-        ),
-        labelStyle: const TextStyle(
-          color: AppColors.textColor,
-          fontFamily: 'Inter',
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryButton, width: 2)),
+        labelStyle: const TextStyle(color: AppColors.textColor, fontSize: 16, fontWeight: FontWeight.w500),
       ),
     );
   }
