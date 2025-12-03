@@ -41,8 +41,6 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       print("   -> Nombre: ${equipment.name}");
       print("   -> Status (Crudo): '${equipment.status}'");
       print("   -> Temp. Actual (Sensor): ${equipment.currentTemperature}");
-      print("   -> Temp. Objetivo (Set): ${equipment.setTemperature}");
-      print("   -> ¿Está Encendido?: ${equipment.isPoweredOn}");
       print("--------------------------------------------------");
     }
     // --------------------------------------------------------
@@ -137,8 +135,8 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. TARJETA PRINCIPAL (Sin controles de edición)
-          _buildMainControlCard(equipment, provider),
+          // 1. TARJETA PRINCIPAL (Monitor)
+          _buildMainMonitorCard(equipment),
 
           const SizedBox(height: 24),
 
@@ -164,8 +162,9 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
     );
   }
 
-  Widget _buildMainControlCard(EquipmentEntity eq, EquipmentDetailProvider provider) {
-    // Lógica de estado basada en String (active, inactive, etc.)
+  // --- TARJETA REDISEÑADA: SOLO LECTURA ---
+  Widget _buildMainMonitorCard(EquipmentEntity eq) {
+    // Lógica de estado
     final String status = eq.status.toLowerCase();
 
     Color chipColor = Colors.grey.shade100;
@@ -183,7 +182,7 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       textColor = Colors.orange;
       statusIcon = Icons.build;
       label = "MANTENIMIENTO";
-    } else if (status == 'inactive' || status == 'outofservice') {
+    } else {
       chipColor = const Color(0xFFFFEBEE);
       textColor = Colors.red;
       statusIcon = Icons.error;
@@ -238,31 +237,36 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
             child: Divider(),
           ),
 
-          // --- INFO DE TERMOSTATO (MODO LECTURA) ---
-          // Como la API devuelve 403, quitamos los botones + / -
+          // --- MONITOR DE TEMPERATURA (SOLO LECTURA) ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Termostato", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
+                children: const [
+                  Text("Temperatura Actual", style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
                   SizedBox(height: 4),
-                  Text("Configuración Actual", style: TextStyle(fontSize: 12, color: Colors.black45)),
+                  Text("Lectura del sensor", style: TextStyle(fontSize: 12, color: Colors.black45)),
                 ],
               ),
 
-              // VISUALIZADOR DE TEMPERATURA
+              // INDICADOR GRANDE
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F7FA),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                child: Text(
-                    "${eq.setTemperature?.toStringAsFixed(1) ?? '--'}°C",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black87)
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.thermostat, color: AppColors.primaryButton, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                        "${eq.currentTemperature.toStringAsFixed(1)}°C",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black87)
+                    ),
+                  ],
                 ),
               )
             ],
@@ -335,7 +339,7 @@ class _ProviderEquipmentDetailPageState extends State<ProviderEquipmentDetailPag
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       children: [
-        _buildSpecItem(Icons.thermostat, "Temperatura Actual", "${eq.currentTemperature}°C"),
+        _buildSpecItem(Icons.thermostat, "Temperatura Objetivo", "${eq.setTemperature ?? '--'}°C"),
         _buildSpecItem(Icons.qr_code, "Serie", eq.serialNumber),
         _buildSpecItem(Icons.location_on, "Ubicación", eq.locationName),
         _buildSpecItem(Icons.bolt, "Energía", "${eq.energyConsumptionCurrent} ${eq.energyConsumptionCurrent}"),
