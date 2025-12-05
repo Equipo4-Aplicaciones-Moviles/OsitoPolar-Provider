@@ -1,0 +1,11 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.example.osito_polar_app",
+    "sha256_cert_fingerprints":
+    ["FC:6C:63:60:90:1C:FE:59:41:B9:0B:5D:42:EA:A3:30:D3:DD:2B:E7:AD:A9:B2:59:A2:C5:5D:B4:6B:F6:C0:F6", "FC:6C:63:60:90:1C:FE:59:41:B9:0B:5D:42:EA:A3:30:D3:DD:2B:E7:AD:A9:B2:59:A2:C5:5D:B4:6B:F6:C0:F6"]
+  }
+}]
+
+

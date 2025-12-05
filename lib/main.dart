@@ -1,122 +1,277 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/TwoFactorSetUpPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/TwoFactorVerificationPage.dart';
+import 'package:provider/provider.dart';
+import 'package:app_links/app_links.dart';
 
-void main() {
-  runApp(const MyApp());
+// --- DI & THEME ---
+import 'package:osito_polar_app/core/di/ServiceLocator.dart';
+import 'package:osito_polar_app/core/theme/app_colors.dart';
+import 'package:osito_polar_app/core/routing/app_route.dart';
+
+// --- PROVIDERS ---
+import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
+import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
+import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
+import 'package:osito_polar_app/feature/provider-module/presentation/providers/ProviderProfileProvider.dart';
+// --- PÁGINAS ---
+import 'package:osito_polar_app/feature/onboarding/presentation/screens/GetStartedScreen.dart';
+import 'package:osito_polar_app/feature/onboarding/presentation/screens/SelectProfileScreen.dart'; // Asegúrate que este archivo acepte los callbacks
+import 'package:osito_polar_app/feature/equipment/presentation/pages/ProviderEquipmentDetailPage.dart';
+// Auth Pages
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientLoginPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ClientRegisterPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderLoginPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegisterPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/ProviderRegistrationSuccessPage.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/pages/SelectPlanPage.dart'; // <--- IMPORTANTE: Importar SelectPlanPage
+import 'package:osito_polar_app/feature/authentication/presentation/pages/TermsPage.dart'; // Importar TermsPage
+
+// Provider Module
+import 'package:osito_polar_app/feature/provider-module/presentation/pages/ProviderHomePage.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/pages/MyEquipmentPage.dart';
+import 'package:osito_polar_app/feature/equipment/presentation/pages/AddEquipmentPage.dart';
+import 'package:osito_polar_app/feature/service_request/presentation/pages/MarketplacePage.dart';
+import 'package:osito_polar_app/feature/technician/presentation/pages/ProviderClientsTechniciansPage.dart';
+import 'package:osito_polar_app/feature/technician/presentation/pages/TechniciansDetailPage.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+  await setupLocator();
+
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+  ));
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => sl<ProviderLoginProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<RegisterProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<AddEquipmentProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<EquipmentDetailProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<ProviderHomeProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<EquipmentProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<MarketplaceProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<TechnicianProvider>()),
+        ChangeNotifierProvider(create: (_) => sl<TechnicianDetailProvider>()),
+        ChangeNotifierProvider(create: (_) => ProviderProfileProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAppLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initAppLinks() async {
+    _appLinks = AppLinks();
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) _handleDeepLink(initialUri);
+    } catch (e) {
+      debugPrint('Error obteniendo link inicial: $e');
+    }
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) => _handleDeepLink(uri));
+  }
+
+  void _handleDeepLink(Uri uri) {
+    debugPrint("🔗 Link Recibido: $uri");
+    final sessionId = uri.queryParameters['session_id'];
+
+    if (sessionId != null) {
+      debugPrint("✅ Session ID encontrado: $sessionId");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_navigatorKey.currentState != null) {
+          debugPrint("🚀 Navegando a SuccessPage...");
+          _navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
+            ),
+                (route) => false,
+          );
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      navigatorKey: _navigatorKey,
+      title: 'OsitoPolar App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        fontFamily: 'Inter',
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primaryButton,
+          primary: AppColors.primaryButton,
+          background: AppColors.backgroundLight,
+        ),
+        scaffoldBackgroundColor: AppColors.backgroundLight,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryButton,
+            foregroundColor: AppColors.buttonLabel,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          ),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.textFieldBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            borderSide: BorderSide(color: AppColors.textFieldBorder, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            borderSide: BorderSide(color: AppColors.textFieldBorder, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+            borderSide: BorderSide(color: AppColors.primaryButton, width: 2),
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+
+      initialRoute: AppRoute.getStarted,
+
+      onGenerateRoute: (settings) {
+        // Manejo de Deep Link en Web
+        if (settings.name != null && settings.name!.startsWith('/registration/success')) {
+          final uri = Uri.parse(settings.name!);
+          final sessionId = uri.queryParameters['session_id'];
+          return MaterialPageRoute(
+            builder: (context) => ProviderRegistrationSuccessPage(sessionId: sessionId),
+          );
+        }
+
+        switch (settings.name) {
+        // --- ONBOARDING ---
+          case AppRoute.getStarted:
+            return MaterialPageRoute(builder: (context) => const GetStartedScreen());
+
+          case AppRoute.selectProfile:
+          // *** CAMBIO: Redirección directa a Provider Login ***
+          // Saltamos la pantalla de selección "Cliente vs Empresa"
+            return MaterialPageRoute(builder: (context) => ProviderLoginPage(
+              onRegisterClicked: () => Navigator.pushNamed(context, '/select_plan'),
+              onForgotPasswordClicked: () {},
+            ));
+
+        // --- NUEVA RUTA: SELECCIÓN DE PLAN ---
+          case '/select_plan':
+            return MaterialPageRoute(builder: (context) => const SelectPlanPage());
+
+        // --- AUTH ---
+          case AppRoute.clientLogin:
+            return MaterialPageRoute(builder: (context) => ClientLoginPage(
+              onLoginClicked: (u, p) {},
+              onRegisterClicked: () => Navigator.pushNamed(context, AppRoute.clientRegister),
+              onForgotPasswordClicked: () {},
+            ));
+          case AppRoute.clientRegister:
+            return MaterialPageRoute(builder: (context) => ClientRegisterPage(
+              onSignUpClicked: (u, p) => Navigator.pop(context),
+              onSignInClicked: () => Navigator.pop(context),
+            ));
+
+          case AppRoute.providerLogin:
+            return MaterialPageRoute(builder: (context) => ProviderLoginPage(
+              onRegisterClicked: () => Navigator.pushNamed(context, '/select_plan'), // Flujo corregido también aquí
+              onForgotPasswordClicked: () {},
+            ));
+
+          case '/2fa_verify':
+            return MaterialPageRoute(builder: (context) => const TwoFactorVerificationPage());
+
+          case '/2fa_setup':
+          // Usamos la misma página para setup/verificación por ahora o puedes separarlas
+            return MaterialPageRoute(builder: (context) => const TwoFactorSetupPage());
+
+
+          case AppRoute.providerRegister:
+          // 3. RECIBIMOS EL ARGUMENTO DEL PLAN
+            final args = settings.arguments as int?;
+            return MaterialPageRoute(builder: (context) => ProviderRegisterPage(
+              planId: args, // Se lo pasamos al registro
+              onSignInClicked: () => Navigator.pushNamed(context, AppRoute.providerLogin),
+            ));
+
+        // --- PROVIDER MODULE ---
+          case '/provider_home':
+            return MaterialPageRoute(builder: (context) => const ProviderHomePage());
+
+          case '/provider_my_equipments':
+            return MaterialPageRoute(builder: (context) => const MyEquipmentPage());
+
+          case '/provider_equipment_detail':
+            final args = settings.arguments;
+            if (args is int) {
+              return MaterialPageRoute(
+                builder: (context) => ProviderEquipmentDetailPage(equipmentId: args),
+              );
+            }
+            return MaterialPageRoute(builder: (context) => const Scaffold(body: Center(child: Text("ID Inválido"))));
+
+
+          case '/provider_marketplace':
+            return MaterialPageRoute(builder: (context) => const MarketplacePage());
+
+          case '/provider_clients_technicians':
+            return MaterialPageRoute(builder: (context) => const ProviderClientsTechniciansPage());
+
+          case '/terms':
+            return MaterialPageRoute(builder: (context) => const TermsPage());
+
+        // --- SUB-PÁGINAS ---
+          case '/provider_add_equipment':
+            final equipmentId = settings.arguments as int?;
+            return MaterialPageRoute(builder: (context) => AddEquipmentPage(equipmentId: equipmentId));
+
+          case '/provider_technician_detail':
+            final technicianId = settings.arguments as int;
+            return MaterialPageRoute(builder: (context) => TechnicianDetailPage(technicianId: technicianId));
+
+          default:
+            return MaterialPageRoute(builder: (context) => const GetStartedScreen());
+        }
+      },
     );
   }
 }
