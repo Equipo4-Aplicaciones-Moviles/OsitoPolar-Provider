@@ -1,25 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
-// --- 1. ¡ESTA ES LA LÍNEA CORREGIDA! ---
-//    Cambiamos el 'import' para que coincida con tu 'main.dart' y 'ServiceLocator.dart'
 import 'package:provider/provider.dart';
-import '../../../../core/theme/app_colors.dart';
-// (Asumiendo que tus widgets core SÍ usan 'PascalCase.dart' como tus otras carpetas)
-import '../../../../core/ui/widgets/OsitoPolarFooter.dart';
-import '../../../../core/ui/widgets/OsitoPolarTopBar.dart';
 
-/// Pantalla de Login para Providers (Empresas).
-/// Pantalla de Login para Providers (Empresas).
+import 'package:osito_polar_app/core/theme/app_colors.dart';
+import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
+
 class ProviderLoginPage extends StatefulWidget {
-  // 2. ¡YA NO NECESITAMOS 'onLoginClicked'!
-  //    La pantalla ahora maneja su propia lógica.
-  final VoidCallback onRegisterClicked;
-  final VoidCallback onForgotPasswordClicked;
+  final VoidCallback? onRegisterClicked;
+  final VoidCallback? onForgotPasswordClicked;
 
   const ProviderLoginPage({
     super.key,
-    required this.onRegisterClicked,
-    required this.onForgotPasswordClicked,
+    this.onRegisterClicked,
+    this.onForgotPasswordClicked,
   });
 
   @override
@@ -27,290 +19,275 @@ class ProviderLoginPage extends StatefulWidget {
 }
 
 class _ProviderLoginPageState extends State<ProviderLoginPage> {
-  final _businessNameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _obscureText = true;
 
   @override
   void dispose() {
-    _businessNameController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 3. ESCUCHAMOS LOS CAMBIOS DE ESTADO
-    //    Usamos 'watch' y el nombre de tu CLASE 'ProviderLoginProvider'
+    // 1. ESCUCHAMOS LOS CAMBIOS DE ESTADO
     final provider = context.watch<ProviderLoginProvider>();
     final state = provider.state;
+    final bool isLoading = (state == LoginState.loading);
 
-    // 4. ESCUCHAMOS "EVENTOS" (como éxito en login para navegar)
+    // 2. LISTENER DE NAVEGACIÓN (ACTUALIZADO PARA 2FA)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
+      // CASO A: Login Directo (Tiene token) -> Ir al Home
       if (state == LoginState.success) {
-        // Si el login fue exitoso, navegamos al home
-        Navigator.pushReplacementNamed(context, '/provider_home');
-        // TODO: Resetear el estado en el provider (provider.resetState())
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/provider_home', (route) => false);
       }
+      // CASO B: Requiere 2FA -> Ir a pantalla de Verificación
+      else if (state == LoginState.requires2FA) {
+        // CAMBIO: Usamos la ruta de verificación explícita
+        Navigator.pushNamed(context, '/2fa_verify');
+      }
+
     });
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: OsitoPolarTopBar(
-        onMenuClicked: () {
-          // TODO: Implementar lógica del drawer
-        },
-      ),
-      bottomNavigationBar: const OsitoPolarFooter(),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Card(
-                elevation: 0,
-                color: AppColors.cardBackground,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                  side: const BorderSide(
-                    color: AppColors.cardBorder,
-                    width: 1,
-                  ),
+      resizeToAvoidBottomInset: true,
+      body: Stack(
+        children: [
+          // Capa 1: Fondo Blanco Base
+          Container(
+            color: Colors.white,
+            height: double.infinity,
+            width: double.infinity,
+          ),
+          // Capa 2: Degradado suave
+          Opacity(
+            opacity: 0.3,
+            child: Container(
+              height: double.infinity,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.backgroundLight,
+                    Colors.white,
+                  ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 32.0, vertical: 48.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Sign In',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.title,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 32,
-                          fontFamily: 'Inter',
+              ),
+            ),
+          ),
+
+          // Capa 3: Contenido
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // LOGO (Opcional también aquí si quieres consistencia)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primaryButton.withOpacity(0.1),
+                      ),
+                      child: const Icon(Icons.ac_unit_rounded, size: 40, color: AppColors.primaryButton),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      '¡Bienvenido de vuelta!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                        letterSpacing: -0.5,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Inicia sesión en tu cuenta de Proveedor',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF667085),
+                        fontWeight: FontWeight.w400,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // --- MENSAJE DE ERROR ---
+                    if (state == LoginState.error)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Text(
+                          provider.errorMessage,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: 32.0),
 
-                      // --- CAMPO "EMPRESA" ---
-                      _buildTextField(
-                        controller: _businessNameController,
-                        labelText: 'Empresa',
-                        keyboardType: TextInputType.text,
-                        // Deshabilitamos el campo si está cargando
-                        isEnabled: state != LoginState.loading,
-                      ),
-                      const SizedBox(height: 16.0),
+                    // --- CAMPO USUARIO ---
+                    Align(alignment: Alignment.centerLeft, child: _buildLabel('Nombre de usuario')),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _usernameController,
+                      hintText: 'Ej. Oliver09',
+                      isEnabled: !isLoading,
+                    ),
 
-                      // --- CAMPO "PASSWORD" ---
-                      _buildPasswordField(
-                        isEnabled: state != LoginState.loading,
-                      ),
-                      const SizedBox(height: 16.0),
+                    const SizedBox(height: 24),
 
-                      Align(
-                        alignment: Alignment.centerRight,
+                    // --- CAMPO CONTRASEÑA ---
+                    Align(alignment: Alignment.centerLeft, child: _buildLabel('Contraseña')),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _passwordController,
+                      hintText: '•••••••••',
+                      isPassword: true,
+                      obscureText: _obscureText,
+                      isEnabled: !isLoading,
+                      onToggleVisibility: () {
+                        setState(() { _obscureText = !_obscureText; });
+                      },
+                    ),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10.0, right: 8.0),
                         child: TextButton(
-                          // Deshabilitamos si está cargando
-                          onPressed: state == LoginState.loading
-                              ? null
-                              : widget.onForgotPasswordClicked,
+                          onPressed: isLoading ? null : widget.onForgotPasswordClicked,
                           child: const Text(
-                            'Forgot Password?',
+                            '¿Olvidaste tu contraseña?',
                             style: TextStyle(
-                              color: AppColors.textLink,
+                              color: AppColors.primaryButton,
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
                               fontFamily: 'Inter',
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24.0),
+                    ),
 
-                      // --- BOTÓN "SIGN IN" (MODIFICADO) ---
-                      ElevatedButton(
-                        // 5. LLAMAMOS AL PROVIDER
-                        onPressed: state == LoginState.loading
+                    const SizedBox(height: 40),
+
+                    // --- BOTÓN LOGIN ---
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: isLoading
                             ? null
                             : () {
-                          // Usamos el nombre de tu CLASE 'ProviderLoginProvider'
+                          if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Ingresa usuario y contraseña.')),
+                            );
+                            return;
+                          }
                           context.read<ProviderLoginProvider>().signIn(
-                            _businessNameController.text,
+                            _usernameController.text,
                             _passwordController.text,
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryButton,
-                          foregroundColor: AppColors.buttonLabel,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                         ),
-                        // 6. MOSTRAMOS SPINNER SI ESTÁ CARGANDO
-                        child: state == LoginState.loading
-                            ? const CircularProgressIndicator(
-                          valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                            : const Text(
-                          'Sign In',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('Login', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
-                      const SizedBox(height: 16.0),
+                    ),
 
-                      // 7. MOSTRAMOS MENSAJE DE ERROR
-                      if (state == LoginState.error)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            provider.errorMessage,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
+                    const SizedBox(height: 30),
+
+                    // --- FOOTER ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('¿No tienes cuenta? ', style: TextStyle(color: Color(0xFF667085), fontSize: 14, fontFamily: 'Inter')),
+                        GestureDetector(
+                            onTap: isLoading ? null : widget.onRegisterClicked,
+                            child: const Text('Regístrate', style: TextStyle(color: AppColors.primaryButton, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Inter'))
                         ),
-
-                      const SizedBox(height: 16.0),
-
-                      // --- ENLACE A REGISTRO ---
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "Don't have an account?",
-                            style: TextStyle(
-                              color: AppColors.textColor,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          TextButton(
-                            // Deshabilitamos si está cargando
-                            onPressed: state == LoginState.loading
-                                ? null
-                                : widget.onRegisterClicked,
-                            child: const Text(
-                              'Register',
-                              style: TextStyle(
-                                color: AppColors.textLink,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  /// Helper para campos de texto
+  // --- WIDGETS AUXILIARES ---
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF344054), fontFamily: 'Inter'),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
-    required String labelText,
-    required TextInputType keyboardType,
-    bool isEnabled = true, // Añadido
+    required String hintText,
+    bool isPassword = false,
+    bool obscureText = false,
+    bool isEnabled = true,
+    VoidCallback? onToggleVisibility,
   }) {
     return TextField(
       controller: controller,
-      enabled: isEnabled, // Aplicado
+      obscureText: obscureText,
+      enabled: isEnabled,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF475467), fontFamily: 'Inter'),
       decoration: InputDecoration(
-        labelText: labelText,
         filled: true,
-        fillColor: AppColors.textFieldBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.primaryButton,
-            width: 2,
-          ),
-        ),
-        labelStyle: const TextStyle(
-          color: AppColors.textColor,
-          fontFamily: 'Inter',
-        ),
-      ),
-      keyboardType: keyboardType,
-    );
-  }
+        fillColor: const Color(0xFFE1E7EF),
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black38, fontSize: 15, fontFamily: 'Inter'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
 
-  /// Helper para el campo de Password
-  Widget _buildPasswordField({bool isEnabled = true}) { // Añadido
-    return TextField(
-      controller: _passwordController,
-      obscureText: _obscureText,
-      enabled: isEnabled, // Aplicado
-      decoration: InputDecoration(
-        labelText: 'Password',
-        filled: true,
-        fillColor: AppColors.textFieldBackground,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: const BorderSide(color: Colors.transparent, width: 0)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: const BorderSide(color: AppColors.primaryButton, width: 1.5)),
+
+        suffixIcon: isPassword
+            ? Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: IconButton(
+            icon: Icon(obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: const Color(0xFF475467), size: 22),
+            onPressed: onToggleVisibility,
           ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.textFieldBorder,
-            width: 1,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(
-            color: AppColors.primaryButton,
-            width: 2,
-          ),
-        ),
-        labelStyle: const TextStyle(
-          color: AppColors.textColor,
-          fontFamily: 'Inter',
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscureText ? Icons.visibility_off : Icons.visibility,
-            color: AppColors.textColor,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscureText = !_obscureText;
-            });
-          },
-        ),
+        )
+            : null,
       ),
     );
   }

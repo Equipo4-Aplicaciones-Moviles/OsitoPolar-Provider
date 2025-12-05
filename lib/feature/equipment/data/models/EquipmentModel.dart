@@ -1,47 +1,36 @@
 import 'dart:convert';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
-// Basado en el schema 'EquipmentResource' de tu API (Swagger)
-class EquipmentModel {
-  final int id;
-  final String name;
-  final String type;
-  final String model;
-  final String serialNumber;
-  final String status;
-  final double currentTemperature;
-  final int ownerId;
-  final String locationName;
+// Imports de Rental Info
+import 'package:osito_polar_app/feature/equipment/data/models/RentalInfoModel.dart';
 
-  // --- ¡CAMPOS AÑADIDOS! ---
-  final String code;
-  final String manufacturer;
-  final double energyConsumptionCurrent;
-  final String technicalDetails;
-  final String notes;// (Tu API lo tiene)
-  final String ownershipType;
+class EquipmentModel extends EquipmentEntity {
 
-  EquipmentModel({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.model,
-    required this.serialNumber,
-    required this.status,
-    required this.currentTemperature,
-    required this.ownerId,
-    required this.locationName,
-    // --- ¡AÑADIDO! ---
-    required this.code,
-    required this.manufacturer,
-    required this.energyConsumptionCurrent,
-    required this.technicalDetails,
-    required this.notes,
-    required this.ownershipType,
+  const EquipmentModel({
+    required super.id,
+    required super.name,
+    required super.type,
+    required super.model,
+    required super.serialNumber,
+    required super.status,
+    required super.currentTemperature,
+    // Campos nuevos pasados al super
+    super.setTemperature,
+    super.isPoweredOn = false,
 
+    required super.ownerId,
+    required super.locationName,
+    required super.code,
+    required super.manufacturer,
+    required super.energyConsumptionCurrent,
+    required super.technicalDetails,
+    required super.notes,
+    required super.ownershipType,
+    required super.cost,
+    super.rentalInfo,
   });
 
   factory EquipmentModel.empty() {
-    return EquipmentModel(
+    return const EquipmentModel(
       id: 0,
       name: '',
       type: '',
@@ -49,6 +38,8 @@ class EquipmentModel {
       serialNumber: '',
       status: 'inactive',
       currentTemperature: 0.0,
+      setTemperature: 0.0,
+      isPoweredOn: false,
       ownerId: 0,
       locationName: '',
       code: '',
@@ -57,52 +48,49 @@ class EquipmentModel {
       technicalDetails: '',
       notes: '',
       ownershipType: 'Owned',
+      cost: 0.0,
+      rentalInfo: null,
     );
   }
 
   factory EquipmentModel.fromJson(String str) =>
       EquipmentModel.fromMap(json.decode(str));
 
-  factory EquipmentModel.fromMap(Map<String, dynamic> json) => EquipmentModel(
-    id: json['id']?? 0,
-    name: json['name'] ?? 'Nombre no disponible',
-    type: json['type'] ?? 'N/A',
-    model: json['model'] ?? 'N/A',
-    serialNumber: json['serialNumber'] ?? 'N/A',
-    status: json['status'] ?? 'Desconocido',
-    currentTemperature: json['currentTemperature']?.toDouble() ?? 0.0,
-    ownerId: json['ownerId'] ?? 0,
-    locationName: json['locationName'] ?? 'Ubicación desconocida',
+  factory EquipmentModel.fromMap(Map<String, dynamic> json) {
 
-    // --- ¡AÑADIDO! ---
-    // (Mapeamos los nuevos campos desde el JSON de la API)
-    code: json['code'] ?? 'N/A',
-    manufacturer: json['manufacturer'] ?? 'N/A',
-    energyConsumptionCurrent: json['energyConsumptionCurrent']?.toDouble() ?? 0.0,
-    technicalDetails: json['technicalDetails'] ?? 'N/A',
-    notes: json['notes'] ?? 'N/A',
-    ownershipType: json['ownershipType'] ?? 'Owned', // <-- Añadido
-  );
+    // Lógica para leer rentalInfo
+    RentalInfoModel? rentalData;
+    if (json['rentalInfo'] != null) {
+      rentalData = RentalInfoModel.fromMap(json['rentalInfo']);
+    }
 
-  EquipmentEntity toEntity() {
-    return EquipmentEntity(
-      id: id,
-      name: name,
-      type: type,
-      model: model,
-      serialNumber: serialNumber,
-      status: status,
-      currentTemperature: currentTemperature,
-      ownerId: ownerId,
-      locationName: locationName,
-      code: code,
-      manufacturer: manufacturer,
-      energyConsumptionCurrent: energyConsumptionCurrent,
-      technicalDetails: technicalDetails,
-      notes: notes,
-      ownershipType: ownershipType,
+    return EquipmentModel(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'Nombre no disponible',
+      type: json['type'] ?? 'N/A',
+      model: json['model'] ?? 'N/A',
+      serialNumber: json['serialNumber'] ?? 'N/A',
+      status: json['status'] ?? 'Desconocido',
+      currentTemperature: (json['currentTemperature'] as num?)?.toDouble() ?? 0.0,
+
+      // --- MAPEO DE CAMPOS NUEVOS ---
+      setTemperature: (json['setTemperature'] as num?)?.toDouble(),
+      isPoweredOn: json['isPoweredOn'] ?? false,
+
+      ownerId: json['ownerId'] ?? 0,
+      locationName: json['locationName'] ?? 'Ubicación desconocida',
+      code: json['code'] ?? 'N/A',
+      manufacturer: json['manufacturer'] ?? 'N/A',
+      energyConsumptionCurrent: (json['energyConsumptionCurrent'] as num?)?.toDouble() ?? 0.0,
+      technicalDetails: json['technicalDetails'] ?? 'N/A',
+      notes: json['notes'] ?? 'N/A',
+      ownershipType: json['ownershipType'] ?? 'Owned',
+      cost: (json['cost'] as num?)?.toDouble() ?? 0.0,
+      rentalInfo: rentalData,
     );
   }
+
+  EquipmentEntity toEntity() => this;
 
   static List<EquipmentModel> listFromMap(List<dynamic> list) =>
       List<EquipmentModel>.from(list.map((x) => EquipmentModel.fromMap(x)));

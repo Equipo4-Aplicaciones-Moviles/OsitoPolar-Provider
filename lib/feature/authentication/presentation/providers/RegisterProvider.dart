@@ -6,13 +6,15 @@ import 'package:osito_polar_app/feature/authentication/domain/usecases/CompleteR
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Estados para CADA paso del flujo
+import '../../domain/entities/RegistrationCredentialsEntity.dart';
+
+
 enum RegisterState {
-  initial, // (El formulario)
-  creatingCheckout, // (Llamando a la API - Paso 1)
-  checkoutCreated,  // (¡Tenemos URL! Esperando que el usuario pague)
-  completingRegistration, // (Llamando a la API - Paso 2)
-  registrationComplete, // (¡Éxito total!)
+  initial,
+  creatingCheckout,
+  checkoutCreated,
+  completingRegistration,
+  registrationComplete,
   error
 }
 
@@ -41,10 +43,14 @@ class RegisterProvider extends ChangeNotifier {
   static const _kFormDataKey = 'temp_reg_form_data';
   static const _kSessionIdKey = 'temp_reg_session_id';
 
-  // --- ¡SOLUCIÓN 1: SEGURO PARA DOBLE LLAMADA! ---
-  bool _isCompleting = false;
 
-  /// PASO 1: Llamado desde 'ProviderRegisterPage'
+  bool _isCompleting = false;
+  RegistrationCredentialsEntity? _credentials;
+
+  // 2. Getter para que la UI pueda leerla
+  RegistrationCredentialsEntity? get credentials => _credentials;
+
+  /// Llamado desde 'ProviderRegisterPage'
   Future<void> createCheckout(
       Map<String, dynamic> formData,
       CheckoutParams checkoutParams,
@@ -81,16 +87,15 @@ class RegisterProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// PASO 2: Llamado desde 'RegistrationSuccessPage'
+  /// Llamado desde 'RegistrationSuccessPage'
   Future<void> completeRegistration(String sessionIdFromUrl) async {
 
-    // --- ¡AQUÍ ESTÁ LA SOLUCIÓN AL DOBLE USUARIO! ---
-    // Si ya estamos completando o ya terminamos, ignora esta segunda llamada.
+
     if (_isCompleting || _state == RegisterState.registrationComplete) {
       print("¡IGNORANDO LLAMADA DOBLE a completeRegistration!");
       return;
     }
-    // ¡Activamos el seguro!
+
     _isCompleting = true;
     // --------------------------------------------------
 
@@ -101,7 +106,7 @@ class RegisterProvider extends ChangeNotifier {
     if (formDataString == null || formDataString.isEmpty || savedSessionId == null) {
       _errorMessage = "Error: No se encontraron datos de registro. Intenta de nuevo.";
       _state = RegisterState.error;
-      _isCompleting = false; // <-- Resetea el seguro
+      _isCompleting = false;
       notifyListeners();
       return;
     }
@@ -109,7 +114,7 @@ class RegisterProvider extends ChangeNotifier {
     if (sessionIdFromUrl != savedSessionId) {
       _errorMessage = "Error: El ID de sesión no coincide. Intenta el proceso de nuevo.";
       _state = RegisterState.error;
-      _isCompleting = false; // <-- Resetea el seguro
+      _isCompleting = false;
       notifyListeners();
       return;
     }
@@ -140,12 +145,12 @@ class RegisterProvider extends ChangeNotifier {
           (failure) {
         _errorMessage = _mapFailureToMessage(failure);
         _state = RegisterState.error;
-        _isCompleting = false; // <-- Resetea el seguro
+        _isCompleting = false;
       },
-          (success) {
+          (credentialsEntity) {
+        _credentials = credentialsEntity; // <-- ¡Guardamos aquí!
         _state = RegisterState.registrationComplete;
-        _clearRegistrationData(); // ¡Éxito! Limpiamos los datos temporales
-        // (No reseteamos _isCompleting, ya que el flujo terminó)
+        _clearRegistrationData();
       },
     );
     notifyListeners();
@@ -161,7 +166,7 @@ class RegisterProvider extends ChangeNotifier {
     _state = RegisterState.initial;
     _errorMessage = '';
     _clearRegistrationData();
-    _isCompleting = false; // <-- ¡Asegúrate de resetear el seguro aquí también!
+    _isCompleting = false;
     notifyListeners();
   }
 

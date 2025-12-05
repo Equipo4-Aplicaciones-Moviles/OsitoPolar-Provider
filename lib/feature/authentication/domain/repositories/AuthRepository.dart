@@ -3,6 +3,9 @@ import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/RegistrationCheckoutEntity.dart';
 
+import '../../data/models/TwoFactorSecretModel.dart';
+import '../entities/RegistrationCredentialsEntity.dart';
+
 abstract class AuthRepository {
   Future<Either<Failure, AuthenticatedUserEntity>> signIn({
     required String username,
@@ -20,8 +23,15 @@ abstract class AuthRepository {
 
   // --- ¡NUEVO MÉTODO! ---
   // Para la segunda llamada a la API
-  Future<Either<Failure, void>> completeRegistration({
+  Future<Either<Failure, RegistrationCredentialsEntity>> completeRegistration({
     required String sessionId,
     required Map<String, dynamic> registrationData,
   });
+
+  Future<Either<Failure, AuthenticatedUserEntity>> verifyTwoFactor({
+    required String username,
+    required String code,
+  });
+
+  Future<Either<Failure, TwoFactorSecretModel>> initiateTwoFactor(String username);
 }

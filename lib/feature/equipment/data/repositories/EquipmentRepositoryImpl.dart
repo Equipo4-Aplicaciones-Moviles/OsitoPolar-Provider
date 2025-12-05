@@ -1,12 +1,18 @@
 import 'package:dartz/dartz.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:osito_polar_app/core/error/Failures.dart';
+import 'package:osito_polar_app/core/error/Exceptions.dart';
+
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSource.dart';
 import 'package:osito_polar_app/feature/equipment/data/models/CreateEquipmentModel.dart';
+import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
 import 'package:osito_polar_app/feature/equipment/domain/entities/EquipmentEntity.dart';
 import 'package:osito_polar_app/feature/equipment/domain/repositories/EquipmentRepository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:osito_polar_app/feature/equipment/data/models/EquipmentModel.dart';
 
+import '../../domain/entities/EquipmentHealthEntity.dart';
+import '../../domain/entities/EquipmentReadingEntity.dart';
+import '../models/EquipmentOperationModel.dart';
 
 class EquipmentRepositoryImpl implements EquipmentRepository {
   final EquipmentRemoteDataSource remoteDataSource;
@@ -17,48 +23,43 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
     required this.prefs,
   });
 
-  // --- ¡MAPEADO ACTUALIZADO! ---
   @override
   Future<Either<Failure, List<EquipmentEntity>>> getEquipments() async {
-    print('--- Llamando al DataSource real para Equipos ---');
     try {
       final equipmentModels = await remoteDataSource.getEquipments();
 
+      // --- ¡AQUÍ ESTÁ EL CAMBIO! ---
+      // Usamos el método .toEntity() del modelo.
+      // Como el modelo ya sabe leer 'rentalInfo', la entidad también lo tendrá.
       final equipmentEntities = equipmentModels
-          .map((model) => EquipmentEntity(
-        id: model.id,
-        name: model.name,
-        type: model.type,
-        model: model.model,
-        serialNumber: model.serialNumber,
-        status: model.status,
-        currentTemperature: model.currentTemperature,
-        ownerId: model.ownerId,
-        locationName: model.locationName,
-        // --- ¡AÑADIDO! ---
-        code: model.code,
-        manufacturer: model.manufacturer,
-        energyConsumptionCurrent: model.energyConsumptionCurrent,
-        technicalDetails: model.technicalDetails,
-        notes: model.notes,
-        ownershipType: model.ownershipType,
-      ))
+          .map((model) => model.toEntity())
           .toList();
 
-      print('--- Llamada real exitosa. ${equipmentEntities.length} equipos encontrados. ---');
       return Right(equipmentEntities);
-
-    } on Exception {
-      return Left(ServerFailure());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
-  // --- ¡MAPEADO ACTUALIZADO! ---
+  @override
+  Future<Either<Failure, EquipmentEntity>> getEquipmentById(int equipmentId) async {
+    try {
+      final equipmentModel = await remoteDataSource.getEquipmentById(equipmentId);
+      return Right(equipmentModel.toEntity());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
   @override
   Future<Either<Failure, EquipmentEntity>> createEquipment(
       Map<String, dynamic> equipmentData) async {
     try {
-      // 1. Convierte el Map del formulario en el Modelo de Request
+      // Convertimos el Map del formulario al Modelo que pide la API
       final requestModel = CreateEquipmentModel(
         name: equipmentData['name'],
         type: equipmentData['type'],
@@ -85,138 +86,69 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         energyConsumptionAverage: equipmentData['energyConsumptionAverage'],
       );
 
-      // 2. Llama al "cartero" (DataSource)
       final newEquipmentModel =
       await remoteDataSource.createEquipment(requestModel);
 
-      // 3. Mapea el Modelo a una Entidad
-      final equipmentEntity = _mapModelToEntity(newEquipmentModel);
-
-      // 4. Retorna el éxito (Right)
-      return Right(equipmentEntity);
-    } on Exception {
-      return Left(ServerFailure());
+      return Right(newEquipmentModel.toEntity());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
-  // --- ¡MAPEADO ACTUALIZADO! ---
   @override
-  Future<Either<Failure, EquipmentEntity>> getEquipmentById(int equipmentId) async {
+  Future<Either<Failure, EquipmentEntity>> updateEquipment(
+      int equipmentId, Map<String, dynamic> equipmentData) async {
     try {
-      // 1. Llama al "cartero" (DataSource)
-      final equipmentModel = await remoteDataSource.getEquipmentById(equipmentId);
-
-      // 2. Mapea el Modelo (Data) a una Entidad (Domain)
-      final equipmentEntity = EquipmentEntity(
-        id: equipmentModel.id,
-        name: equipmentModel.name,
-        type: equipmentModel.type,
-        model: equipmentModel.model,
-        serialNumber: equipmentModel.serialNumber,
-        status: equipmentModel.status,
-        currentTemperature: equipmentModel.currentTemperature,
-        ownerId: equipmentModel.ownerId,
-        locationName: equipmentModel.locationName,
-        // --- ¡AÑADIDO! ---
-        code: equipmentModel.code,
-        manufacturer: equipmentModel.manufacturer,
-        energyConsumptionCurrent: equipmentModel.energyConsumptionCurrent,
-        technicalDetails: equipmentModel.technicalDetails,
-        notes: equipmentModel.notes,
-        ownershipType: equipmentModel.ownershipType,
+      // Reutilizamos CreateEquipmentModel para el Update (PUT)
+      final requestModel = CreateEquipmentModel(
+        name: equipmentData['name'],
+        type: equipmentData['type'],
+        model: equipmentData['model'],
+        serialNumber: equipmentData['serialNumber'],
+        ownerId: equipmentData['ownerId'],
+        code: equipmentData['code'],
+        notes: equipmentData['notes'],
+        ownerType: equipmentData['ownerType'],
+        locationName: equipmentData['locationName'],
+        manufacturer: equipmentData['manufacturer'],
+        ownershipType: equipmentData['ownershipType'],
+        locationAddress: equipmentData['locationAddress'],
+        technicalDetails: equipmentData['technicalDetails'],
+        energyConsumptionUnit: equipmentData['energyConsumptionUnit'],
+        cost: equipmentData['cost'],
+        currentTemperature: equipmentData['currentTemperature'],
+        setTemperature: equipmentData['setTemperature'],
+        optimalTemperatureMin: equipmentData['optimalTemperatureMin'],
+        optimalTemperatureMax: equipmentData['optimalTemperatureMax'],
+        locationLatitude: equipmentData['locationLatitude'],
+        locationLongitude: equipmentData['locationLongitude'],
+        energyConsumptionCurrent: equipmentData['energyConsumptionCurrent'],
+        energyConsumptionAverage: equipmentData['energyConsumptionAverage'],
       );
 
-      // 3. Retorna el éxito (Right)
-      return Right(equipmentEntity);
-    } on Exception {
-      // 4. Si el "cartero" falla, retorna un fracaso (Left)
-      return Left(ServerFailure());
+      final updatedEquipmentModel =
+      await remoteDataSource.updateEquipment(equipmentId, requestModel);
+
+      return Right(updatedEquipmentModel.toEntity());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
   Future<Either<Failure, void>> deleteEquipment(int equipmentId) async {
     try {
-      // 1. Llama al "cartero" (DataSource) para borrar
-      //    (No esperamos respuesta, es 'void')
       await remoteDataSource.deleteEquipment(equipmentId);
-
-      // 2. Retorna el éxito (Right)
-      return const Right(null); // 'null' representa 'void'
-    } on Exception {
-      // 3. Si el "cartero" falla, retorna un fracaso (Left)
-      return Left(ServerFailure());
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
-  }
-
-
-  // --- ¡MÉTODO AÑADIDO! ---
-  @override
-  Future<Either<Failure, EquipmentEntity>> updateEquipment(
-      int equipmentId, Map<String, dynamic> equipmentData) async {
-    try {
-      // 1. Convierte el Map del formulario en el Modelo de Request
-      //    (Reutilizamos el 'CreateEquipmentModel' para el PUT)
-      final requestModel = CreateEquipmentModel(
-        name: equipmentData['name'],
-        type: equipmentData['type'],
-        model: equipmentData['model'],
-        serialNumber: equipmentData['serialNumber'],
-        ownerId: equipmentData['ownerId'],
-        code: equipmentData['code'],
-        notes: equipmentData['notes'],
-        ownerType: equipmentData['ownerType'],
-        locationName: equipmentData['locationName'],
-        manufacturer: equipmentData['manufacturer'],
-        ownershipType: equipmentData['ownershipType'],
-        locationAddress: equipmentData['locationAddress'],
-        technicalDetails: equipmentData['technicalDetails'],
-        energyConsumptionUnit: equipmentData['energyConsumptionUnit'],
-        cost: equipmentData['cost'],
-        currentTemperature: equipmentData['currentTemperature'],
-        setTemperature: equipmentData['setTemperature'],
-        optimalTemperatureMin: equipmentData['optimalTemperatureMin'],
-        optimalTemperatureMax: equipmentData['optimalTemperatureMax'],
-        locationLatitude: equipmentData['locationLatitude'],
-        locationLongitude: equipmentData['locationLongitude'],
-        energyConsumptionCurrent: equipmentData['energyConsumptionCurrent'],
-        energyConsumptionAverage: equipmentData['energyConsumptionAverage'],
-      );
-
-      // 2. Llama al "cartero" (DataSource) con el ID
-      final updatedEquipmentModel =
-      await remoteDataSource.updateEquipment(equipmentId, requestModel);
-
-      // 3. Mapea el Modelo a una Entidad
-      final equipmentEntity = _mapModelToEntity(updatedEquipmentModel);
-
-      // 4. Retorna el éxito (Right)
-      return Right(equipmentEntity);
-    } on Exception {
-      return Left(ServerFailure());
-    }
-  }
-
-  // --- ¡HELPER AÑADIDO! ---
-  /// Helper privado para mapear un Modelo (Data) a una Entidad (Domain)
-  EquipmentEntity _mapModelToEntity(EquipmentModel model) {
-    return EquipmentEntity(
-      id: model.id,
-      name: model.name,
-      type: model.type,
-      model: model.model,
-      serialNumber: model.serialNumber,
-      status: model.status,
-      currentTemperature: model.currentTemperature,
-      ownerId: model.ownerId,
-      locationName: model.locationName,
-      code: model.code,
-      manufacturer: model.manufacturer,
-      energyConsumptionCurrent: model.energyConsumptionCurrent,
-      technicalDetails: model.technicalDetails,
-      notes: model.notes,
-      ownershipType: model.ownershipType,
-    );
   }
 
   @override
@@ -233,16 +165,14 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
         startDate: startDate,
         endDate: endDate,
       );
-      // ¡Usamos el .toEntity() que acabamos de crear!
       return Right(equipmentModel.toEntity());
-    } on Exception catch(e) {
-      return Left(ServerFailure());
-    } catch (e) {
-      return Left(ServerFailure());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
-  // --- ¡AÑADIR ESTE MÉTODO! ---
   @override
   Future<Either<Failure, EquipmentEntity>> unpublishEquipment({
     required int equipmentId,
@@ -251,12 +181,76 @@ class EquipmentRepositoryImpl implements EquipmentRepository {
       final equipmentModel = await remoteDataSource.unpublishEquipment(
         equipmentId: equipmentId,
       );
-      // ¡Usamos el .toEntity()!
       return Right(equipmentModel.toEntity());
-    } on Exception catch(e) {
-      return Left(ServerFailure());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+
+  @override
+  Future<Either<Failure, EquipmentHealthEntity>> getEquipmentHealth({
+    required int equipmentId,
+    required int days,
+  }) async {
+    try {
+      // 1. Llama al DataSource que ya construye la URL y maneja el token
+      final healthModel = await remoteDataSource.getEquipmentHealth(
+        equipmentId: equipmentId,
+        days: days,
+      );
+
+      // 2. Éxito: Retorna el modelo que hereda de la entidad.
+      return Right(healthModel);
+
+    } on ServerException catch (e) {
+      // 3. Captura el error específico del servidor
+      return Left(ServerFailure(message: e.message));
+
+    } on Exception catch (e) {
+      // 4. Captura cualquier otro error (Red, Parseo, NotFound, etc.)
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<EquipmentReadingEntity>>> getEquipmentReadings({
+    required int equipmentId,
+    required int hours,
+  }) async {
+    // ... Implementación de lecturas (si la agregaste en el DataSource) ...
+    throw UnimplementedError();
+  }
+
+  // --- ¡AQUÍ ESTÁ LA IMPLEMENTACIÓN QUE FALTABA! ---
+  @override
+  Future<Either<Failure, EquipmentEntity>> updateEquipmentOperations({
+    required int equipmentId,
+    double? temperature,
+    String? powerState,
+  }) async {
+    try {
+      // 1. Creamos el modelo con los datos
+      final operationModel = EquipmentOperationModel(
+        temperature: temperature,
+        powerState: powerState,
+      );
+
+      // 2. Llamamos al DataSource
+      final updatedEquipment = await remoteDataSource.updateEquipmentOperations(
+        equipmentId: equipmentId,
+        operations: operationModel,
+      );
+
+      // 3. Retornamos la entidad actualizada
+      return Right(updatedEquipment.toEntity());
+
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 }

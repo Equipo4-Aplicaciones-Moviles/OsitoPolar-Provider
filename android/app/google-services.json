@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "720206335538",
+    "project_id": "ositopolar-7b86b",
+    "storage_bucket": "ositopolar-7b86b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:720206335538:android:e3a74211d8045cef38f62b",
+        "android_client_info": {
+          "package_name": "com.example.osito_polar_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAxrOHtypm9UKcSW0qO_qHcIbdomgITfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

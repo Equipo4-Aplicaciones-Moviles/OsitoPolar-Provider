@@ -1,28 +1,35 @@
 import 'package:flutter/material.dart';
-// ¡Actualizado para usar tus imports 'PascalCase'!
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:osito_polar_app/core/error/Failures.dart';
 import 'package:osito_polar_app/feature/authentication/domain/entities/AuthenticatedUserEntity.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/SignInUseCase.dart';
+import 'package:osito_polar_app/feature/authentication/domain/usecases/VerifyTwoFactorUseCase.dart';
+// 1. Importar el nuevo Caso de Uso
+import 'package:osito_polar_app/feature/authentication/domain/usecases/InitiateTwoFactorUseCase.dart';
 
-/// Define los posibles estados de la UI para el login.
 enum LoginState {
-  initial, // Estado inicial, no se ha hecho nada
-  loading, // Cargando, muestra un Spinner
-  success, // Éxito, navega a la siguiente pantalla
-  error    // Error, muestra un mensaje
+  initial,
+  loading,
+  success,
+  requires2FA,
+  error
 }
 
-/// El "ViewModel" para la pantalla de Login del Proveedor.
-/// ¡Esta es la clase que se llama 'ProviderLoginProvider'!
 class ProviderLoginProvider extends ChangeNotifier {
   final SignInUseCase signInUseCase;
+  final VerifyTwoFactorUseCase verifyTwoFactorUseCase;
+  // 2. Declarar la dependencia
+  final InitiateTwoFactorUseCase initiateTwoFactorUseCase;
   final SharedPreferences prefs;
-  ProviderLoginProvider(
-      {required this.signInUseCase,
-        required this.prefs,});
 
-  // --- Estados de la UI ---
+  ProviderLoginProvider({
+    required this.signInUseCase,
+    required this.verifyTwoFactorUseCase,
+    required this.initiateTwoFactorUseCase, // 3. Pedirla en el constructor
+    required this.prefs,
+  });
+
+  // --- Estados ---
   LoginState _state = LoginState.initial;
   LoginState get state => _state;
 
@@ -32,78 +39,166 @@ class ProviderLoginProvider extends ChangeNotifier {
   AuthenticatedUserEntity? _user;
   AuthenticatedUserEntity? get user => _user;
 
-  // --- Lógica de Negocio ---
+  // --- Datos Temporales para 2FA ---
+  String? _tempQrCode;
+  String? _tempSecret;
+  String? _tempUsername;
 
-  /// Método principal que la UI llamará al presionar "Sign In".
+  String? get tempQrCode => _tempQrCode;
+  String? get tempSecret => _tempSecret;
+
+  // --- LÓGICA: LOGIN ---
   Future<void> signIn(String username, String password) async {
-    // 1. Pone el estado en "cargando" y notifica a la UI
+    print("🔵 Provider: Iniciando login para $username...");
     _state = LoginState.loading;
     notifyListeners();
 
-    // 2. Llama al Caso de Uso (UseCase)
-    final failureOrUser = await signInUseCase(
-      username: username,
-      password: password,
-    );
+    final failureOrUser = await signInUseCase(username: username, password: password);
 
-    // 3. Maneja la respuesta (Either<Failure, User>)
     failureOrUser.fold(
           (failure) {
-        // --- Caso de Error ---
+        print("🔴 Provider: Error en login -> $failure");
         _errorMessage = _mapFailureToMessage(failure);
         _state = LoginState.error;
       },
           (user) {
-        // --- Caso de Éxito ---
-        _user = user;
-        _state = LoginState.success;
+        print("🟢 Provider: API respondió Éxito.");
 
-        // TODO: Guardar el user.token en SharedPreferences (LocalStorage)
-        print('Login exitoso. Guardando token: ${user.token}');
-        _saveTokenToPrefs(user.token);
-
+        // CASO 1: Requiere 2FA (Login interceptado)
+        if (user.requiresTwoFactorSetup) {
+          _tempQrCode = user.qrCodeDataUrl;
+          _tempSecret = user.manualEntryKey;
+          _tempUsername = user.username;
+          _state = LoginState.requires2FA;
+        }
+        // CASO 2: Login directo
+        else if (user.token != null && user.token!.isNotEmpty) {
+          _user = user;
+          _saveUserToPrefs(user);
+          _state = LoginState.success;
+        }
+        else {
+          _errorMessage = "Respuesta desconocida del servidor.";
+          _state = LoginState.error;
+        }
       },
     );
-
-    // 4. Notifica a la UI sobre el nuevo estado (éxito o error)
     notifyListeners();
   }
 
-  Future<void> _saveTokenToPrefs(String token) async {
-    await prefs.setString('auth_token', token);
-  }
+  // --- LÓGICA: VERIFICAR 2FA (Para Login o Activación) ---
+  Future<void> verifyTwoFactor(String code) async {
+    _state = LoginState.loading;
+    notifyListeners();
 
-  /// Convierte un objeto Failure en un mensaje legible para el usuario.
-  String _mapFailureToMessage(Failure failure) {
-    switch (failure.runtimeType) {
-      case ServerFailure:
-      // TODO: Mejorar mensajes (ej. "Usuario o contraseña incorrecta")
-        return 'Error del servidor. Inténtalo más tarde.';
-    // (Asumiendo que no tienes NetworkFailure.dart)
-    // case NetworkFailure:
-    //   return 'No hay conexión a internet.';
-      default:
-        return 'Un error inesperado ocurrió.';
+    // Usamos el usuario temporal (login) o el actual (configuración)
+    final username = _tempUsername ?? _user?.username ?? prefs.getString('username');
+
+    if (username == null) {
+      _errorMessage = "Error de sesión. Vuelve a loguearte.";
+      _state = LoginState.error;
+      notifyListeners();
+      return;
     }
+
+    final params = VerifyTwoFactorParams(username: username, code: code);
+    final result = await verifyTwoFactorUseCase(params);
+
+    result.fold(
+          (failure) {
+        _errorMessage = _mapFailureToMessage(failure);
+        // Si falla, volvemos a requerir 2FA para que intente de nuevo
+        // (OJO: Si estamos en setup, la UI de setup debe manejar esto,
+        // pero 'requires2FA' no rompe nada).
+        _state = LoginState.error; // Cambiado a error para que la UI muestre el msg rojo
+      },
+          (user) {
+        // ¡Éxito!
+        _user = user;
+        _saveUserToPrefs(user);
+        _state = LoginState.success;
+      },
+    );
+    notifyListeners();
   }
 
+  // --- LÓGICA: GENERAR QR (CONFIGURACIÓN INICIAL) ---
+  Future<void> generateTwoFactorSecret() async {
+    _state = LoginState.loading;
+    notifyListeners();
+
+    final username = _user?.username ?? prefs.getString('username');
+
+    if (username == null) {
+      _errorMessage = "No se encontró usuario activo.";
+      _state = LoginState.error;
+      notifyListeners();
+      return;
+    }
+
+    _tempUsername = username;
+
+    final result = await initiateTwoFactorUseCase(username);
+
+    result.fold(
+          (failure) {
+        _errorMessage = _mapFailureToMessage(failure);
+        _state = LoginState.error;
+      },
+          (secretData) {
+        _tempQrCode = secretData.qrCodeDataUrl;
+        _tempSecret = secretData.manualEntryKey;
+        // Mantenemos 'initial' para que la UI muestre los datos sin navegar
+        _state = LoginState.initial;
+      },
+    );
+    notifyListeners();
+  }
+
+  // --- LIMPIAR ESTADO ---
+  void resetState() {
+    _state = LoginState.initial;
+    _errorMessage = '';
+    _tempQrCode = null;
+    _tempSecret = null;
+    notifyListeners();
+  }
+
+  // --- LÓGICA: LOGOUT ---
   Future<void> logout() async {
-    // Borra todos los datos de sesión que guardamos
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
     await prefs.remove('username');
     await prefs.remove('user_type');
     await prefs.remove('profile_id');
 
-    // Limpia el estado interno del provider
     _user = null;
     _state = LoginState.initial;
     _errorMessage = '';
 
-    print("Logout exitoso. Token borrado.");
-
-    // Notifica a los listeners (aunque no es estrictamente necesario
-    // si vamos a navegar inmediatamente)
+    print("Logout exitoso. Datos borrados.");
     notifyListeners();
+  }
+
+  Future<void> _saveUserToPrefs(AuthenticatedUserEntity user) async {
+    if (user.token != null) {
+      await prefs.setString('auth_token', user.token!);
+    }
+    await prefs.setInt('user_id', user.id);
+    await prefs.setString('username', user.username);
+    if (user.userType != null) {
+      await prefs.setString('user_type', user.userType!);
+    }
+    if (user.profileId != null) {
+      await prefs.setInt('profile_id', user.profileId!);
+    }
+    print('Datos de usuario guardados en SharedPreferences.');
+  }
+
+  String _mapFailureToMessage(Failure failure) {
+    if (failure is ServerFailure && failure.message != null) {
+      return failure.message!;
+    }
+    return 'Un error inesperado ocurrió.';
   }
 }

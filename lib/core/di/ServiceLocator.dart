@@ -10,9 +10,11 @@ import 'package:osito_polar_app/feature/authentication/domain/repositories/AuthR
 import 'package:osito_polar_app/feature/authentication/domain/usecases/SignInUseCase.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateRegistrationCheckoutUseCase.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/CompleteRegistrationUseCase.dart';
+// --- ¡AÑADE ESTE IMPORT! ---
+import 'package:osito_polar_app/feature/authentication/domain/usecases/VerifyTwoFactorUseCase.dart';
+// ----------------------------
 import 'package:osito_polar_app/feature/authentication/presentation/providers/LoginProvider.dart';
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
-
 // --- EQUIPMENT IMPORTS ---
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSource.dart';
 import 'package:osito_polar_app/feature/equipment/data/datasource/EquipmentRemoteDataSourceImpl.dart';
@@ -27,7 +29,6 @@ import 'package:osito_polar_app/feature/equipment/domain/usecases/PublishEquipme
 import 'package:osito_polar_app/feature/equipment/domain/usecases/UnpublishEquipmentUseCase.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/AddEquipmentProvider.dart';
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentDetailProvider.dart';
-// ¡NUEVO PROVIDER DE EQUIPMENT!
 import 'package:osito_polar_app/feature/equipment/presentation/providers/EquipmentProvider.dart';
 
 // --- SERVICE REQUEST IMPORTS ---
@@ -37,44 +38,62 @@ import 'package:osito_polar_app/feature/service_request/data/repositories/Servic
 import 'package:osito_polar_app/feature/service_request/domain/repositories/ServiceRequestRepository.dart';
 import 'package:osito_polar_app/feature/service_request/domain/usecases/GetAvailableServiceRequestsUseCase.dart';
 import 'package:osito_polar_app/feature/service_request/domain/usecases/AcceptServiceRequestUseCase.dart';
-// ¡NUEVO PROVIDER DE MARKETPLACE!
+import 'package:osito_polar_app/feature/service_request/domain/usecases/GetServiceRequestsUseCase.dart';
 import 'package:osito_polar_app/feature/service_request/presentation/providers/MarketplaceProvider.dart';
 
 // --- PROVIDER DASHBOARD (HOME) IMPORTS ---
-// ¡EL PROVIDER DEL DASHBOARD/RESUMEN!
 import 'package:osito_polar_app/feature/provider-dashboard/presentation/providers/ProviderHomeProvider.dart';
-//TECHNICIAN IMPORTS
 
+// --- TECHNICIAN IMPORTS ---
 import 'package:osito_polar_app/feature/technician/domain/repositories/TechnicianRepository.dart';
 import 'package:osito_polar_app/feature/technician/data/repositories/TechnicianRepositoryImpl.dart';
 import 'package:osito_polar_app/feature/technician/data/datasource/TechnicianRemoteDataSource.dart';
 import 'package:osito_polar_app/feature/technician/data/datasource/TechnicianRemoteDataSourceImpl.dart';
-import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianUseCase.dart';
+import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianUseCase.dart'; // (Corregido nombre plural)
 import 'package:osito_polar_app/feature/technician/domain/usecases/CreateTechnicianUseCase.dart';
-import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart'; // (Lo crearemos en el siguiente paso)
-import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianByIdUseCase.dart';
+import 'package:osito_polar_app/feature/technician/domain/usecases/GetTechnicianByIdUseCase.dart'; // (Añadido)
+import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianProvider.dart';
 import 'package:osito_polar_app/feature/technician/presentation/providers/TechnicianDetailProvider.dart';
+
+import '../../feature/authentication/domain/usecases/InitiateTwoFactorUseCase.dart';
+import '../../feature/equipment/domain/usecases/GetEquipmentHealthUseCase.dart';
+import '../../feature/equipment/domain/usecases/UpdateEquipmentOperationUseCase.dart';
+import '../../feature/provider-withdrawals/data/models/WithdrawalModel.dart';
+import '../../feature/provider-withdrawals/data/repositories/WithdrawalRepository.dart';
+import '../../feature/provider-withdrawals/presentation/providers/WithdrawalProviders.dart';
+
 
 final sl = GetIt.instance;
 
 Future<void> setupLocator() async {
   await sl.reset();
 
-  // --- PASO 1: CORE/EXTERNAL ---
+  // --- CORE ---
   sl.registerLazySingleton(() => http.Client());
   final prefs = await SharedPreferences.getInstance();
   sl.registerLazySingleton<SharedPreferences>(() => prefs);
 
-  // --- PASO 2: FEATURES ---
 
   // --- Authentication ---
-  // (Sin cambios)
-  sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(client: sl()));
+  sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(client: sl(), prefs: sl()));
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(remoteDataSource: sl()));
+
+  // UseCases Auth
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => CreateRegistrationCheckoutUseCase(sl()));
   sl.registerLazySingleton(() => CompleteRegistrationUseCase(sl()));
-  sl.registerFactory(() => ProviderLoginProvider(signInUseCase: sl(), prefs: sl()));
+
+  // --- ¡AÑADE ESTA LÍNEA! ---
+  sl.registerLazySingleton(() => VerifyTwoFactorUseCase(sl()));
+  // --------------------------
+
+  // Providers Auth
+  sl.registerFactory(() => ProviderLoginProvider(
+    signInUseCase: sl(),
+    verifyTwoFactorUseCase: sl(),
+    initiateTwoFactorUseCase: sl(), // <-- Nuevo
+    prefs: sl(),
+  ));
   sl.registerFactory(() => RegisterProvider(
     createRegistrationCheckoutUseCase: sl(),
     completeRegistrationUseCase: sl(),
@@ -91,15 +110,20 @@ Future<void> setupLocator() async {
   sl.registerLazySingleton(() => UpdateEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => PublishEquipmentUseCase(sl()));
   sl.registerLazySingleton(() => UnpublishEquipmentUseCase(sl()));
+  sl.registerLazySingleton(() => GetEquipmentHealthUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateEquipmentOperationUseCase(sl()));
 
   sl.registerFactory(() => AddEquipmentProvider(
     createEquipmentUseCase: sl(),
     updateEquipmentUseCase: sl(),
     getEquipmentByIdUseCase: sl(),
   ));
-  sl.registerFactory(() => EquipmentDetailProvider(getEquipmentByIdUseCase: sl()));
+  sl.registerFactory(() => EquipmentDetailProvider(
+    getEquipmentByIdUseCase: sl(),
+    getEquipmentHealthUseCase: sl(),
+    updateEquipmentOperationUseCase: sl(),// <--- ¡AGREGAR ESTO!
+  ));
 
-  // ¡NUEVO PROVIDER DE EQUIPMENT (para la pág. Mis Equipos)!
   sl.registerFactory(() => EquipmentProvider(
     getEquipmentsUseCase: sl(),
     deleteEquipmentUseCase: sl(),
@@ -107,49 +131,56 @@ Future<void> setupLocator() async {
     unpublishEquipmentUseCase: sl(),
   ));
 
+  sl.registerLazySingleton(() => InitiateTwoFactorUseCase(sl()));
+
   // --- ServiceRequest Stack ---
   sl.registerLazySingleton<ServiceRequestRemoteDataSource>(() => ServiceRequestRemoteDataSourceImpl(client: sl(), prefs: sl()));
   sl.registerLazySingleton<ServiceRequestRepository>(() => ServiceRequestRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton(() => GetAvailableServiceRequestsUseCase(sl()));
   sl.registerLazySingleton(() => AcceptServiceRequestUseCase(sl()));
+  sl.registerLazySingleton(() => GetServiceRequestsUseCase(sl()));
+  // (Nota: AssignTechnicianUseCase ya no lo usamos en MarketplaceProvider, así que no es crítico,
+  // pero si lo usas en algún lado, añádelo).
 
-  // ¡NUEVO PROVIDER DE MARKETPLACE (para la pág. Marketplace)!
   sl.registerFactory(() => MarketplaceProvider(
     getAvailableServiceRequestsUseCase: sl(),
     acceptServiceRequestUseCase: sl(),
+    // assignTechnicianUseCase: sl(), // (Borrado porque revertimos el plan)
   ));
 
-  // --- ProviderHome Stack (Dashboard/Resumen) ---
-  // ¡EL PROVIDER DEL DASHBOARD!
+  // --- ProviderHome Stack ---
   sl.registerFactory(() => ProviderHomeProvider(
-    getEquipmentsUseCase: sl(), // (Necesita esto para el conteo)
-    getAvailableServiceRequestsUseCase: sl(), // (Necesita esto para el conteo)
+    getEquipmentsUseCase: sl(),
+    getAvailableServiceRequestsUseCase: sl(),
   ));
-
 
   // --- Technician Stack ---
-
-  // D. DataSources
-  sl.registerLazySingleton<TechnicianRemoteDataSource>(
-        () => TechnicianRemoteDataSourceImpl(client: sl(), prefs: sl()),
-  );
-
-  // C. Repositories
-  sl.registerLazySingleton<TechnicianRepository>(
-        () => TechnicianRepositoryImpl(remoteDataSource: sl()),
-  );
-
-  // B. UseCases
+  sl.registerLazySingleton<TechnicianRemoteDataSource>(() => TechnicianRemoteDataSourceImpl(client: sl(), prefs: sl()));
+  sl.registerLazySingleton<TechnicianRepository>(() => TechnicianRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton(() => GetTechniciansUseCase(sl()));
   sl.registerLazySingleton(() => CreateTechnicianUseCase(sl()));
   sl.registerLazySingleton(() => GetTechnicianByIdUseCase(sl()));
 
-  // A. Providers
   sl.registerFactory(() => TechnicianProvider(
     getTechniciansUseCase: sl(),
     createTechnicianUseCase: sl(),
   ));
-  sl.registerFactory(() => TechnicianDetailProvider( // (El del detalle)
+  sl.registerFactory(() => TechnicianDetailProvider(
     getTechnicianByIdUseCase: sl(),
+  ));
+
+
+  sl.registerLazySingleton<WithdrawalRemoteDataSource>(
+  () => WithdrawalRemoteDataSourceImpl(client: sl(), prefs: sl()));
+  sl.registerLazySingleton<WithdrawalRepository>(
+  () => WithdrawalRepositoryImpl(remoteDataSource: sl()));
+
+  sl.registerLazySingleton(() => GetProviderBalanceUseCase(sl()));
+  sl.registerLazySingleton(() => RequestWithdrawalUseCase(sl()));
+
+// 2. Provider
+  sl.registerFactory(() => WithdrawalProvider(
+  getProviderBalanceUseCase: sl(),
+  requestWithdrawalUseCase: sl(),
   ));
 }

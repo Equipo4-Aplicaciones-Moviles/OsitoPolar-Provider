@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:osito_polar_app/core/theme/app_colors.dart';
-import 'package:osito_polar_app/core/ui/widgets/OsitoPolarTopBar.dart';
+// Lógica Real
 import 'package:osito_polar_app/feature/authentication/presentation/providers/RegisterProvider.dart';
 import 'package:osito_polar_app/feature/authentication/domain/usecases/CreateRegistrationCheckoutUseCase.dart';
 
-/// Pantalla de Registro para Providers, ahora como un "wizard" de 3 pasos.
 class ProviderRegisterPage extends StatefulWidget {
-  final VoidCallback onSignInClicked;
+  final VoidCallback? onSignInClicked;
+
+  // El ID del plan viene desde la pantalla anterior (SelectPlanPage)
+  final int? planId;
 
   const ProviderRegisterPage({
     super.key,
-    required this.onSignInClicked,
+    this.onSignInClicked,
+    this.planId,
   });
 
   @override
@@ -21,417 +25,560 @@ class ProviderRegisterPage extends StatefulWidget {
 }
 
 class _ProviderRegisterPageState extends State<ProviderRegisterPage> {
-  // --- (Tus controladores no cambian) ---
-  int _currentStep = 0;
+  int _currentStep = 1; // 1: Info Personal, 2: Dirección
+  bool _acceptedTerms = false; // <--- NUEVO: Control del Checkbox
+
+  // Llaves para validar formularios
+  final _step1FormKey = GlobalKey<FormState>();
+  final _step2FormKey = GlobalKey<FormState>();
+
+  // --- CONTROLADORES ---
+  // Paso 1
+  final _nameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _taxIdController = TextEditingController();
+
+  // Paso 2
   final _streetController = TextEditingController();
   final _numberController = TextEditingController();
+  final _zipCodeController = TextEditingController();
   final _cityController = TextEditingController();
-  final _postalCodeController = TextEditingController();
   final _countryController = TextEditingController(text: 'Peru');
 
   @override
   void dispose() {
-    // --- (Tu 'dispose' no cambia) ---
+    _nameController.dispose();
+    _lastNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
-    _firstNameController.dispose();
-    _lastNameController.dispose();
     _companyNameController.dispose();
     _taxIdController.dispose();
     _streetController.dispose();
     _numberController.dispose();
+    _zipCodeController.dispose();
     _cityController.dispose();
-    _postalCodeController.dispose();
     _countryController.dispose();
     super.dispose();
   }
 
-  // --- (Tu lógica de '_buildSteps' no cambia) ---
-  List<Step> _buildSteps(BuildContext context, RegisterState state) {
-    bool isLoading = (state == RegisterState.creatingCheckout ||
-        state == RegisterState.completingRegistration);
+  // --- LÓGICA DE NEGOCIO (Provider + API) ---
 
-    return [
-      // --- PASO 1: DATOS DE CUENTA ---
-      Step(
-        title: const Text(
-          'Cuenta',
-          style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          children: [
-            _buildTextField(
-              controller: _usernameController,
-              labelText: 'Username (para login)',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _emailController,
-              labelText: 'Email (para notificaciones)',
-              keyboardType: TextInputType.emailAddress,
-              isEnabled: !isLoading,
-            ),
-          ],
-        ),
-        isActive: _currentStep >= 0,
-        state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-      ),
-      // --- PASO 2: DATOS DE EMPRESA ---
-      Step(
-        title: const Text(
-          'Empresa',
-          style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          children: [
-            _buildTextField(
-              controller: _companyNameController,
-              labelText: 'Nombre de la Empresa',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _taxIdController,
-              labelText: 'RUC / ID Fiscal',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _firstNameController,
-              labelText: 'Nombre (Contacto)',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _lastNameController,
-              labelText: 'Apellido (Contacto)',
-              isEnabled: !isLoading,
-            ),
-          ],
-        ),
-        isActive: _currentStep >= 1,
-        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-      ),
-      // --- PASO 3: DIRECCIÓN DE FACTURACIÓN ---
-      Step(
-        title: const Text(
-          'Dirección',
-          style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          children: [
-            _buildTextField(
-              controller: _streetController,
-              labelText: 'Calle',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _numberController,
-              labelText: 'Número / Apartamento',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _cityController,
-              labelText: 'Ciudad',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _postalCodeController,
-              labelText: 'Código Postal',
-              isEnabled: !isLoading,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _countryController,
-              labelText: 'País',
-              isEnabled: !isLoading,
-            ),
-          ],
-        ),
-        isActive: _currentStep >= 2,
-        state: _currentStep == 2 ? StepState.editing : StepState.indexed,
-      ),
-    ];
-  }
-
-  // --- (Tu lógica de '_submitRegistration' no cambia) ---
   void _submitRegistration() {
     final provider = context.read<RegisterProvider>();
     if (provider.state == RegisterState.creatingCheckout) return;
 
+    // Mapa de datos para la API
     final formData = {
-      "username": _usernameController.text,
+      "username": _usernameController.text.isNotEmpty ? _usernameController.text : _emailController.text,
       "email": _emailController.text,
       "companyName": _companyNameController.text,
-      "taxId": _taxIdController.text,
-      "firstName": _firstNameController.text,
+      "taxId": _taxIdController.text.isNotEmpty ? _taxIdController.text : "00000000000",
+      "firstName": _nameController.text,
       "lastName": _lastNameController.text,
       "street": _streetController.text,
       "number": _numberController.text,
       "city": _cityController.text,
-      "postalCode": _postalCodeController.text,
+      "postalCode": _zipCodeController.text,
       "country": _countryController.text,
     };
 
+    String successUrl;
+    String cancelUrl;
+
+    if (kIsWeb) {
+      successUrl = "${Uri.base.origin}/#/registration/success";
+      cancelUrl = "${Uri.base.origin}/#/registration/cancel";
+    } else {
+      // Esquema nativo configurado en AndroidManifest
+      successUrl = "ositopolar://registration/success";
+      cancelUrl = "ositopolar://registration/cancel";
+    }
+
     final checkoutParams = CheckoutParams(
-      planId: 4,
+      // Usamos el planId que viene de la pantalla anterior, o el 4 por defecto
+      planId: widget.planId ?? 4,
       userType: "Provider",
-      successUrl: "https://ositopolar-42d82.web.app/registration/success",
-      cancelUrl: "https://ositopolar-42d82.web.app/registration/cancel",
+      successUrl: successUrl,
+      cancelUrl: cancelUrl,
     );
 
-    print("Iniciando Paso 1: Creando checkout...");
+    print("Iniciando Lógica Real: Creando checkout con Plan ID: ${widget.planId}...");
     provider.createCheckout(formData, checkoutParams);
   }
 
-  // --- (Tu lógica de '_launchStripeCheckout' no cambia) ---
   Future<void> _launchStripeCheckout(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, webOnlyWindowName: '_self');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir la página de pago: $url')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo abrir el pago: $url')),
+        );
+      }
+    }
+  }
+
+  void _onNextPressed() {
+    if (_step1FormKey.currentState!.validate()) {
+      setState(() => _currentStep = 2);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Escuchamos el estado real
     final provider = context.watch<RegisterProvider>();
     final state = provider.state;
-    final isLoading = (state == RegisterState.creatingCheckout ||
-        state == RegisterState.completingRegistration);
+    final bool isLoading = (state == RegisterState.creatingCheckout);
 
-    // --- (Tu 'WidgetsBinding' no cambia) ---
+    // Listener para redirección a Stripe
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state == RegisterState.checkoutCreated) {
         final url = provider.checkoutEntity?.checkoutUrl;
         if (url != null) {
-          print("¡Paso 1 Exitoso! Redirigiendo a Stripe: $url");
           _launchStripeCheckout(url);
         }
       }
     });
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: OsitoPolarTopBar(
-        onMenuClicked: () {
-          // TODO: Implementar lógica del drawer
-        },
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Card(
-                elevation: 0,
-                color: AppColors.cardBackground,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                  side: const BorderSide(color: AppColors.cardBorder, width: 1),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 32.0, vertical: 48.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Crear Cuenta de Proveedor',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.title,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 28,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                      const SizedBox(height: 32.0),
+      resizeToAvoidBottomInset: true,
+      body: Stack(
+        children: [
+          // CAPA 1: Fondo Blanco
+          Container(color: Colors.white),
 
-                      // --- WIZARD (STEPPER) ---
-                      Theme(
-                        data: Theme.of(context).copyWith(
-                          colorScheme: Theme.of(context).colorScheme.copyWith(
-                            primary: AppColors.primaryButton,
-                          ),
-                        ),
-                        child: Stepper(
-                          currentStep: _currentStep,
-                          onStepTapped: (step) {
-                            if (!isLoading) setState(() => _currentStep = step);
-                          },
-                          onStepContinue: () {
-                            if (_currentStep == 2) {
-                              _submitRegistration();
-                            } else if (!isLoading) {
-                              setState(() => _currentStep += 1);
-                            }
-                          },
-                          onStepCancel: () {
-                            if (_currentStep > 0 && !isLoading) {
-                              setState(() => _currentStep -= 1);
-                            }
-                          },
-                          steps: _buildSteps(context, state),
-
-                          // ===============================================
-                          // == INICIO DE LA CORRECCIÓN 1 (SPINNER) ==
-                          // ===============================================
-                          controlsBuilder: (context, details) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 16.0),
-                              child: Column(
-                                children: [
-                                  // --- Muestra el Error ---
-                                  if (state == RegisterState.error)
-                                    Padding(
-                                      padding:
-                                      const EdgeInsets.only(bottom: 16.0),
-                                      child: Text(
-                                        provider.errorMessage,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                            color: Colors.red,
-                                            fontFamily: 'Inter'),
-                                      ),
-                                    ),
-
-                                  // --- Muestra el Loading (¡ESTE FALTABA!) ---
-                                  if (isLoading)
-                                    const Center(
-                                        child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                              AppColors.primaryButton),
-                                        )),
-
-                                  // --- Muestra los Botones ---
-                                  if (!isLoading)
-                                    Wrap(
-                                      alignment: WrapAlignment.end,
-                                      spacing: 12.0,
-                                      runSpacing: 8.0,
-                                      children: [
-                                        if (_currentStep > 0)
-                                          TextButton(
-                                            onPressed: details.onStepCancel,
-                                            child: const Text(
-                                              'Atrás',
-                                              style: TextStyle(
-                                                  color: AppColors.textLink),
-                                            ),
-                                          ),
-                                        ElevatedButton(
-                                          onPressed: details.onStepContinue,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                            AppColors.primaryButton,
-                                            foregroundColor:
-                                            AppColors.buttonLabel,
-                                          ),
-                                          child: Text(
-                                            _currentStep == 2
-                                                ? 'Ir a Pagar'
-                                                : 'Continuar',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                          // ===============================================
-                          // == FIN DE LA CORRECCIÓN 1 ==
-                          // ===============================================
-                        ),
-                      ),
-
-                      const SizedBox(height: 32.0),
-
-                      // ===============================================
-                      // == INICIO DE LA CORRECCIÓN 2 (LOGIN OVERFLOW) ==
-                      // ===============================================
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 4.0,
-                        children: [
-                          const Text(
-                            "Already have an account?",
-                            style: TextStyle(color: AppColors.textColor),
-                          ),
-                          TextButton(
-                            onPressed:
-                            isLoading ? null : widget.onSignInClicked,
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
-                                  color: AppColors.textLink,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      )
-                      // ===============================================
-                      // == FIN DE LA CORRECCIÓN 2 ==
-                      // ===============================================
-                    ],
-                  ),
+          // CAPA 2: Degradado
+          Opacity(
+            opacity: 0.3,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.backgroundLight,
+                    Colors.white,
+                  ],
                 ),
               ),
             ),
           ),
+
+          // CAPA 3: Contenido
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Crea una cuenta',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                        letterSpacing: -0.5,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Login Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Ya tienes una cuenta ',
+                          style: TextStyle(fontSize: 16, color: Color(0xFF667085), fontFamily: 'Inter'),
+                        ),
+                        GestureDetector(
+                          onTap: isLoading ? null : (widget.onSignInClicked ?? () => Navigator.pop(context)),
+                          child: const Text(
+                            'Login',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.primaryButton,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Error Message
+                    if (state == RegisterState.error)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Text(
+                          provider.errorMessage,
+                          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
+                    // Stepper Visual
+                    _buildStepper(),
+
+                    const SizedBox(height: 40),
+
+                    // Formularios
+                    if (_currentStep == 1)
+                      Form(key: _step1FormKey, child: _buildStep1Form(isLoading))
+                    else
+                      Form(key: _step2FormKey, child: _buildStep2Form(isLoading)),
+
+                    const SizedBox(height: 20),
+
+                    // --- NUEVO: CHECKBOX DE TÉRMINOS (Solo en el paso final) ---
+                    if (_currentStep == 2)
+                      _buildTermsCheckbox(),
+
+                    const SizedBox(height: 20),
+
+                    // Botón de Acción
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                          // Lógica del botón
+                          if (_currentStep == 1) {
+                            _onNextPressed();
+                          } else {
+                            // Estamos en el paso 2 (Final)
+
+                            // 1. Validar Checkbox
+                            if (!_acceptedTerms) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Debes aceptar los Términos y Condiciones para continuar.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // 2. Validar Formulario y Enviar
+                            if (_step2FormKey.currentState!.validate()) {
+                              _submitRegistration();
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryButton,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                            : Text(
+                          _currentStep == 1 ? 'Siguiente' : 'Pagar y Registrar',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Botón Atrás
+                    if (_currentStep == 2)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: TextButton(
+                          onPressed: isLoading ? null : () => setState(() => _currentStep = 1),
+                          child: const Text("Atrás", style: TextStyle(color: Colors.grey, fontFamily: 'Inter')),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGETS VISUALES ---
+
+  // NUEVO: Widget del Checkbox con enlace
+  Widget _buildTermsCheckbox() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 24,
+          width: 24,
+          child: Checkbox(
+            value: _acceptedTerms,
+            activeColor: AppColors.primaryButton,
+            side: const BorderSide(color: Colors.grey, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            onChanged: (bool? val) {
+              setState(() {
+                _acceptedTerms = val ?? false;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              // Navega a la página de términos
+              Navigator.pushNamed(context, '/terms');
+            },
+            child: RichText(
+              text: const TextSpan(
+                text: 'He leído y acepto los ',
+                style: TextStyle(color: Color(0xFF667085), fontFamily: 'Inter', fontSize: 14),
+                children: [
+                  TextSpan(
+                    text: 'Términos y Condiciones',
+                    style: TextStyle(
+                      color: AppColors.primaryButton,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  TextSpan(text: ' y la Política de Privacidad.'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepper() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepItem(text: 'Info Personal', number: '1', isActive: _currentStep >= 1),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(top: 15.0, left: 10.0, right: 10.0),
+              height: 2,
+              color: AppColors.primaryButton,
+            ),
+          ),
+          _buildStepItem(text: 'Dirección', number: '2', isActive: _currentStep >= 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepItem({required String text, required String number, required bool isActive}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.primaryButton,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primaryButton, width: 2),
+            color: isActive ? AppColors.primaryButton : Colors.white,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: TextStyle(
+                color: isActive ? Colors.white : AppColors.primaryButton,
+                fontWeight: isActive ? FontWeight.w900 : FontWeight.bold,
+                fontSize: 14,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep1Form(bool isLoading) {
+    return Column(
+      children: [
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Nombres *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _nameController, hintText: 'Ej. Oliver', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Apellido *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _lastNameController, hintText: 'Ej. Smith', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Usuario (Opcional)')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _usernameController, hintText: 'oliver123', isEnabled: !isLoading),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Email *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _emailController, hintText: 'ejemplo@correo.com', keyboardType: TextInputType.emailAddress, isEnabled: !isLoading, validator: (v) => !v!.contains('@') ? 'Inválido' : null),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Empresa *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _companyNameController, hintText: 'Nombre de tu empresa', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('RUC / Tax ID *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _taxIdController, hintText: '20123456789', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+      ],
+    );
+  }
+
+  Widget _buildStep2Form(bool isLoading) {
+    return Column(
+      children: [
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Calle *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _streetController, hintText: 'Av. Principal', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+        const SizedBox(height: 20),
+
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('Número *'),
+                  const SizedBox(height: 8),
+                  _buildTextField(controller: _numberController, hintText: '123', keyboardType: TextInputType.number, isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLabel('C. Postal *'),
+                  const SizedBox(height: 8),
+                  _buildTextField(controller: _zipCodeController, hintText: '15001', keyboardType: TextInputType.number, isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('Ciudad *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _cityController, hintText: 'Lima', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+        const SizedBox(height: 20),
+
+        Align(alignment: Alignment.centerLeft, child: _buildLabel('País *')),
+        const SizedBox(height: 8),
+        _buildTextField(controller: _countryController, hintText: 'Perú', isEnabled: !isLoading, validator: (v) => v!.isEmpty ? 'Requerido' : null),
+      ],
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10.0),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: Color(0xFF344054),
+          fontFamily: 'Inter',
         ),
       ),
     );
   }
 
-  /// Helper para campos de texto (no cambia)
   Widget _buildTextField({
     required TextEditingController controller,
-    required String labelText,
-    TextInputType keyboardType = TextInputType.text,
+    required String hintText,
+    TextInputType? keyboardType,
     bool isEnabled = true,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
+      keyboardType: keyboardType,
       enabled: isEnabled,
+      validator: validator,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        color: Color(0xFF475467),
+        fontFamily: 'Inter',
+      ),
       decoration: InputDecoration(
-        labelText: labelText,
         filled: true,
-        fillColor: AppColors.textFieldBackground,
+        fillColor: const Color(0xFFE1E7EF),
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black38, fontSize: 15, fontFamily: 'Inter'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide:
-          const BorderSide(color: AppColors.textFieldBorder, width: 1),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide:
-          const BorderSide(color: AppColors.textFieldBorder, width: 1),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: Colors.transparent, width: 0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide:
-          const BorderSide(color: AppColors.primaryButton, width: 2),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: AppColors.primaryButton, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: AppColors.textColor),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: Colors.red, width: 1.0),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
       ),
-      keyboardType: keyboardType,
     );
   }
 }
